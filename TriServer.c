@@ -1,3 +1,5 @@
+/*  TRISERVER */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -28,6 +30,7 @@ int matrix_dim = 0;
 int timeout = 0;
 char player1;
 char player2;
+bool bot = false;
 
 int ctrl_count = 0;
 
@@ -177,6 +180,20 @@ int main(int argc, char *argv[])
     else
     {
         printf("Spazio di memoria creato\n");
+    }
+
+    /* inizializzazione shared memory */
+    shared_memory[0] = player1;  // player1
+    shared_memory[1] = player2;  // player2
+    shared_memory[2] = getpid(); // pid del server
+    shared_memory[3] = 0;        // turno corrente
+    shared_memory[4] = 0;        // stato del gioco
+    shared_memory[5] = matrix_dim;
+
+    int board_sz = matrix_dim * matrix_dim;
+    for (int i = 0; i < board_sz; i++)
+    {
+        shared_memory[6 + i] = ' ';
     }
 
     // Creazione semaforo
