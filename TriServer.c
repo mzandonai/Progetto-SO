@@ -18,12 +18,8 @@
 #define SEM_KEY 8765
 #define SIZE 1024
 
-// Prototipi
-void startup_controls(int argc, char *argv[]);
-void handle_ctrl(int sig);
-void cleanup();
-bool victory();
-bool draw();
+#define PID1 3
+#define PID2 4
 
 int matrix_dim = 0;
 
@@ -97,6 +93,11 @@ void sig_handle_ctrl(int sig)
     }
 }
 
+// Chiude i processi figli quando sono diversi da 0
+void sig_close_childs(){
+    
+}
+
 // Cancellazione del segmento di memoria
 void cleanup()
 {
@@ -131,18 +132,77 @@ void cleanup()
     }
 }
 
+// Controllo per la vittoria
 bool victory()
 {
-    // controllo orizzontale
 
-    // controllo verticale
+    int dim = shared_memory[8];
+    for (int i = 0; i < dim; i++)
+    {
+        // controllo righe
+        bool row_victory = true;
+        for (int j = 0; j < dim; j++)
+        {
 
-    // controllo diagonale
+            if (shared_memory[9 + i * dim + j] != shared_memory[9 + i * dim] ||
+                shared_memory[9 + i * dim] == ' ')
+            {
+                row_victory = false;
+                break;
+            }
+        }
+        if (row_victory)
+            return true;
+
+        // controllo colonne
+        bool col_victory = true;
+        for (int j = 0; j < dim; j++)
+        {
+            if (shared_memory[9 + j * dim + i] != shared_memory[9 + i] ||
+                shared_memory[9 + i] == ' ')
+            {
+                col_victory = false;
+                break;
+            }
+        }
+        if (col_victory)
+            return true;
+    }
+
+    bool diag_victory1 = false;
+    bool diag_victory2 = false;
+    for (int i = 0; i < dim; i++)
+    {
+        if (
+            shared_memory[9 + i * dim * i] != shared_memory[9] ||
+            shared_memory[9] == ' ')
+        {
+            diag_victory1 = false;
+        }
+
+        if (shared_memory[9 + i * dim + (dim - 1 - i)] != shared_memory[9 + (dim - 1)] ||
+            shared_memory[9 + (dim - 1)] == ' ')
+        {
+            diag_victory2 = false;
+        }
+    }
+
+    return diag_victory1 || diag_victory2;
 }
 
+// Controllo per il pareggio
 bool draw()
 {
     // controllo le celle occupate della matrice
+    int dim = shared_memory[8];
+    for (int i = 0; i < dim; i++)
+    {
+        if (shared_memory[9 + i] = ' ')
+        {
+            return false;
+        }
+        return true;
+    }
 
     // se tutte le celle sono occupate e nessuno ha visto c'è pareggio
 }
@@ -183,17 +243,20 @@ int main(int argc, char *argv[])
     }
 
     /* inizializzazione shared memory */
-    shared_memory[0] = player1;  // player1
-    shared_memory[1] = player2;  // player2
-    shared_memory[2] = getpid(); // pid del server
-    shared_memory[3] = 0;        // turno corrente
-    shared_memory[4] = 0;        // stato del gioco
-    shared_memory[5] = matrix_dim;
+    shared_memory[0] = player1;    // simbolo player1
+    shared_memory[1] = player2;    // simbolo player2
+    shared_memory[2] = getpid();   // pid del server
+    shared_memory[3] = 0;          // PID client1
+    shared_memory[4] = 0;          // PID client2
+    shared_memory[5] = 0;          // turno corrente (0 o 1)
+    shared_memory[6] = 0;          // stato del gioco (0, 1 vittoria, 2 pareggio)
+    shared_memory[7] = timeout;    // timeout
+    shared_memory[8] = matrix_dim; // dimensione matrice
 
     int board_sz = matrix_dim * matrix_dim;
     for (int i = 0; i < board_sz; i++)
     {
-        shared_memory[6 + i] = ' ';
+        shared_memory[9 + i] = ' ';
     }
 
     // Creazione semaforo
@@ -235,9 +298,28 @@ int main(int argc, char *argv[])
 
     printf("Due giocatori connessi...la parita ha inizio\n");
 
+    shared_memory[6] = 0; // Gioco iniziato
     while (1)
     {
-        /* code */
+        if (victory())
+        {
+            printf("un giocatore ha vinto\n");
+            shared_memory[6] = 1;
+            kill(shared_memory[PID1], SIGUSR1);
+            kill(shared_memory[PID2], SIGUSR2);
+            break;
+        }
+
+        if (draw())
+        {
+            printf("Pareggio!\n");
+            shared_memory[6] = 2;               // Stato: pareggio
+            kill(shared_memory[PID1], SIGUSR1); // Notifica al client 1
+            kill(shared_memory[PID2], SIGUSR1); // Notifica al client 2
+            break;
+        }
+
+        sleep(1);
     }
 
     // Rimozione memoria, semaforo
