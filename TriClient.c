@@ -74,35 +74,21 @@ void sig_handle_ctrl(int sig)
 }
 
 // Gestore TIMER
+// Gestore TIMER
 void sig_handle_timer(int sig)
 {
-    // gestore del timer di inserimento mossa
-    printf("\nTempo scaduto, hai perso!\n");
-    shared_memory[6] = 1;
-    kill(shared_memory[PID1] == getpid() ? shared_memory[PID2] : shared_memory[PID1], SIGUSR1);
-    cleanup();
-    exit(EXIT_FAILURE);
+    // Segnala la scadenza del timer
+    printf("\nTempo scaduto! Hai perso la tua mossa.\n");
 }
 
 void sig_server_closed(int sig)
 {
     if (sig == SIGUSR1)
     {
-        if (shared_memory[6] == 1)
-        {
-            printf("\nPartita terminata: hai vinto!\n");
-        }
-        else if (shared_memory[6] == 2)
-        {
-            printf("\nPartita terminata: Pareggio\n");
-        }
-        else
-        {
-            printf("\nServer disconnesso\n");
-        }
-
+        printf("\n");
+        printf("\nIl server è stato disconnesso\n");
         cleanup();
-        exit(EXIT_FAILURE);
+        exit(EXIT_SUCCESS);
     }
 }
 
@@ -110,7 +96,7 @@ void sig_client_away(int sig)
 {
     if (sig == SIGUSR2)
     {
-        printf("\nPartita terminata: l'avversario ha abbandonato\n");
+
         cleanup();
         exit(0);
     }
@@ -149,9 +135,6 @@ void startup_controls(int argc, char *argv[])
         fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
         exit(EXIT_FAILURE);
     }
-
-    // Stampa il nome utente per conferma
-    printf("Benvenuto, %s!\n", argv[1]);
 }
 
 void correct_move()
@@ -310,7 +293,7 @@ int main(int argc, char *argv[])
         {
             symbol = shared_memory[0];
             player = 0;
-            printf("Sta giocando in SINGLE PLAYER\n");
+            printf("Sta giocando contro il bot\n");
             printf("Questo è il tuo simbolo: %c\n", symbol);
         }
         else
@@ -349,12 +332,6 @@ int main(int argc, char *argv[])
         }
 
         sleep(1);
-    }
-
-    if (bot && pid_bot > 0)
-    {
-        kill(pid_bot, SIGKILL);
-        wait(NULL);
     }
 
     cleanup();

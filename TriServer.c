@@ -90,6 +90,18 @@ void sig_handle_ctrl(int sig)
     {
         printf("\nProgramma terminato\n");
         // Rimozione
+
+        if (shared_memory[PID1] > 0)
+        {
+            printf("Terminazione client1 (PID: %d)\n", shared_memory[PID1]);
+            kill(shared_memory[PID1], SIGUSR1);
+        }
+        if (shared_memory[PID2] > 0)
+        {
+            printf("Terminazione client2 (PID: %d)\n", shared_memory[PID2]);
+            kill(shared_memory[PID2], SIGUSR1);
+        }
+
         cleanup();
         exit(0);
     }
@@ -137,7 +149,6 @@ void cleanup()
 // Controllo per la vittoria
 bool victory()
 {
-
     int dim = shared_memory[8];
     for (int i = 0; i < dim; i++)
     {
@@ -309,14 +320,6 @@ int main(int argc, char *argv[])
             shared_memory[6] = 2 // pareggio
             shared_memory[6] = 3 // vittoria per timeout
         */
-        if (shared_memory[PID1] != 0)
-        {
-            kill(shared_memory[PID2], SIGUSR2);
-        }
-        if (shared_memory[PID2] != 0)
-        {
-            kill(shared_memory[PID1], SIGUSR2);
-        }
 
         if (shared_memory[6] == 3)
         {
