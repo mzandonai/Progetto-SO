@@ -107,8 +107,7 @@ void sig_handle_ctrl(int sig)
     }
 }
 
-// Chiude i processi figli quando sono diversi da 0
-void sig_close_childs()
+void sig_client_leave(int sig)
 {
 }
 
@@ -261,7 +260,7 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco (0, 1 vittoria, 2 pareggio)
+    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio)
     shared_memory[7] = timeout;    // timeout
     shared_memory[8] = matrix_dim; // dimensione matrice
 
@@ -318,14 +317,10 @@ int main(int argc, char *argv[])
             shared_memory[6] = 0 // gioco iniziato
             shared_memory[6] = 1 // vittoria
             shared_memory[6] = 2 // pareggio
-            shared_memory[6] = 3 // vittoria per timeout
+            shared_memory[6] = 3 // client abbandonato
+            shared_memory[6] = 4 // client timeout
         */
 
-        if (shared_memory[6] == 3)
-        {
-            printf("Un giocatore ha perso per timeout\n");
-            break;
-        }
         if (victory())
         {
             printf("Un giocatore ha vinto\n");

@@ -67,13 +67,11 @@ void sig_handle_ctrl(int sig)
     else
     {
         printf("\nProgramma terminato\n");
-        // Rimozione
         cleanup();
         exit(0);
     }
 }
 
-// Gestore TIMER
 // Gestore TIMER
 void sig_handle_timer(int sig)
 {
