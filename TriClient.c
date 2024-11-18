@@ -77,23 +77,42 @@ void sig_handle_ctrl(int sig)
 void sig_handle_timer(int sig)
 {
     // gestore del timer di inserimento mossa
-    printf("\nTempo scaduto\n");
-    timer_expired = true;
+    printf("\nTempo scaduto, hai perso!\n");
+    shared_memory[6] = 1;
+    kill(shared_memory[PID1] == getpid() ? shared_memory[PID2] : shared_memory[PID1], SIGUSR1);
+    cleanup();
+    exit(EXIT_FAILURE);
 }
 
 void sig_server_closed(int sig)
 {
     if (sig == SIGUSR1)
     {
-        printf("\nIl server è stato disconnesso.\n");
+        if (shared_memory[6] == 1)
+        {
+            printf("\nPartita terminata: hai vinto!\n");
+        }
+        else if (shared_memory[6] == 2)
+        {
+            printf("\nPartita terminata: Pareggio\n");
+        }
+        else
+        {
+            printf("\nServer disconnesso\n");
+        }
+
         cleanup();
         exit(EXIT_FAILURE);
     }
+}
 
+void sig_client_away(int sig)
+{
     if (sig == SIGUSR2)
     {
-        printf("Il tuo avversario ha abbandonato.\n");
-        exit(EXIT_FAILURE);
+        printf("\nPartita terminata: l'avversario ha abbandonato\n");
+        cleanup();
+        exit(0);
     }
 }
 
@@ -138,8 +157,12 @@ void startup_controls(int argc, char *argv[])
 void correct_move()
 {
     int dim = shared_memory[8]; // Dimensione della matrice
-    int row, col;
-    bool valid_move = false;
+    int row, col;               // Righe e colonne
+    bool valid_move = false;    // Mossa valida messa a false
+
+    // Timer
+    timer_expired = false; // Timer reset
+    alarm(shared_memory[7]);
 
     if (bot)
     {
@@ -157,6 +180,7 @@ void correct_move()
                 shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
                 printf("Il bot ha giocato in posizione (%d, %d)\n", row, col);
                 valid_move = true;
+                alarm(0);
             }
         }
     }
@@ -175,6 +199,7 @@ void correct_move()
                     // Inserisce il simbolo corretto per il giocatore
                     shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
                     valid_move = true;
+                    alarm(0);
                 }
                 else
                 {
@@ -224,6 +249,8 @@ int main(int argc, char *argv[])
     startup_controls(argc, argv);    // Controlli di startup
     signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
     signal(SIGUSR1, sig_server_closed);
+    signal(SIGUSR2, sig_client_away);
+    signal(SIGALRM, sig_handle_timer);
 
     // Memoria condivisa
     shmid = shmget(SHM_KEY, SIZE, 0600);
@@ -272,8 +299,6 @@ int main(int argc, char *argv[])
         else
         {
             shared_memory[PID2] = getpid();
-            printf("\n");
-            printf("\n - | Secondo giocatore | - \n");
             symbol = shared_memory[1];
             player = 1;
         }
@@ -317,13 +342,19 @@ int main(int argc, char *argv[])
             last_turn = shared_memory[5];
         }
 
-        if (shared_memory[5] == player)
+        if (!bot && shared_memory[5] == player)
         {
             printf("Il tuo turno (%c)\n", symbol);
             correct_move();
         }
 
         sleep(1);
+    }
+
+    if (bot && pid_bot > 0)
+    {
+        kill(pid_bot, SIGKILL);
+        wait(NULL);
     }
 
     cleanup();

@@ -35,6 +35,8 @@ int shmid;
 int *shared_memory;
 struct sembuf sop = {0, 0, 0};
 
+void cleanup();
+
 // Controllo iniziale
 void startup_controls(int argc, char *argv[])
 {
@@ -94,8 +96,8 @@ void sig_handle_ctrl(int sig)
 }
 
 // Chiude i processi figli quando sono diversi da 0
-void sig_close_childs(){
-    
+void sig_close_childs()
+{
 }
 
 // Cancellazione del segmento di memoria
@@ -197,13 +199,12 @@ bool draw()
     int dim = shared_memory[8];
     for (int i = 0; i < dim; i++)
     {
-        if (shared_memory[9 + i] = ' ')
+        if (shared_memory[9 + i] == ' ')
         {
             return false;
         }
-        return true;
     }
-
+    return true;
     // se tutte le celle sono occupate e nessuno ha visto c'è pareggio
 }
 
@@ -301,12 +302,33 @@ int main(int argc, char *argv[])
     shared_memory[6] = 0; // Gioco iniziato
     while (1)
     {
+
+        /*
+            shared_memory[6] = 0 // gioco iniziato
+            shared_memory[6] = 1 // vittoria
+            shared_memory[6] = 2 // pareggio
+            shared_memory[6] = 3 // vittoria per timeout
+        */
+        if (shared_memory[PID1] != 0)
+        {
+            kill(shared_memory[PID2], SIGUSR2);
+        }
+        if (shared_memory[PID2] != 0)
+        {
+            kill(shared_memory[PID1], SIGUSR2);
+        }
+
+        if (shared_memory[6] == 3)
+        {
+            printf("Un giocatore ha perso per timeout\n");
+            break;
+        }
         if (victory())
         {
-            printf("un giocatore ha vinto\n");
+            printf("Un giocatore ha vinto\n");
             shared_memory[6] = 1;
             kill(shared_memory[PID1], SIGUSR1);
-            kill(shared_memory[PID2], SIGUSR2);
+            kill(shared_memory[PID2], SIGUSR1);
             break;
         }
 
