@@ -107,8 +107,31 @@ void sig_handle_ctrl(int sig)
     }
 }
 
-void sig_client_leave(int sig)
+void sig_terminate_all(int sig)
 {
+    if (sig == SIGUSR1)
+    {
+        printf("Un client ha richiesto la terminazione di tutti i processi.\n");
+
+        // Termina entrambi i client
+        if (shared_memory[3] != 0) // PID del client1
+        {
+            printf("Terminazione del client1 (PID: %d)...\n", shared_memory[3]);
+            kill(shared_memory[3], SIGTERM); // Segnale di terminazione al client1
+        }
+
+        if (shared_memory[4] != 0) // PID del client2
+        {
+            printf("Terminazione del client2 (PID: %d)...\n", shared_memory[4]);
+            kill(shared_memory[4], SIGTERM); // Segnale di terminazione al client2
+        }
+
+        // Esegui la pulizia
+        cleanup();
+
+        // Termina il server
+        exit(0);
+    }
 }
 
 // Cancellazione del segmento di memoria
@@ -222,6 +245,7 @@ bool draw()
 int main(int argc, char *argv[])
 {
     signal(SIGINT, sig_handle_ctrl);
+    signal(SIGUSR2, sig_terminate_all);
 
     // Controllo iniziale dei parametri
     startup_controls(argc, argv);
@@ -260,7 +284,7 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio)
+    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 end)
     shared_memory[7] = timeout;    // timeout
     shared_memory[8] = matrix_dim; // dimensione matrice
 

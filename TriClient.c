@@ -49,10 +49,6 @@ void cleanup()
             perror("Errore durante distacco mem. condivisa");
             exit(EXIT_FAILURE);
         }
-        else
-        {
-            printf("Mem. condivisa distaccata\n");
-        }
     }
 }
 
@@ -67,6 +63,13 @@ void sig_handle_ctrl(int sig)
     else
     {
         printf("\nProgramma terminato\n");
+
+        if (shared_memory[2] != 0)
+        {
+            kill(shared_memory[2], SIGUSR1);
+        }
+
+        shared_memory[6] = 3;
         cleanup();
         exit(0);
     }
@@ -79,23 +82,34 @@ void sig_handle_timer(int sig)
     printf("\nTempo scaduto! Hai perso la tua mossa.\n");
 }
 
-void sig_server_closed(int sig)
+void sig_handle_termination(int sig)
+{
+    if (sig == SIGTERM)
+    {
+        printf("Ricevuto segnale di terminazione. Chiusura del client.\n");
+
+        // Esegui la pulizia
+        cleanup();
+
+        // Esci
+        exit(0);
+    }
+}
+
+void sig_close(int sig)
 {
     if (sig == SIGUSR1)
     {
         printf("\n");
         printf("\nIl server è stato disconnesso\n");
+        shared_memory[6] = 3;
         cleanup();
-        exit(EXIT_SUCCESS);
+        exit(0);
     }
-}
 
-void sig_client_away(int sig)
-{
     if (sig == SIGUSR2)
     {
-
-        cleanup();
+        printf("\nL'altro giocatore ha abbandonato la partita\n");
         exit(0);
     }
 }
@@ -229,8 +243,9 @@ int main(int argc, char *argv[])
 {
     startup_controls(argc, argv);    // Controlli di startup
     signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
-    signal(SIGUSR1, sig_server_closed);
-    signal(SIGUSR2, sig_client_away);
+    signal(SIGUSR1, sig_close);
+    signal(SIGUSR2, sig_close);
+    signal(SIGTERM, sig_handle_termination);
     signal(SIGALRM, sig_handle_timer);
 
     // Memoria condivisa
