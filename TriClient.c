@@ -63,55 +63,17 @@ void sig_handle_ctrl(int sig)
     else
     {
         printf("\nProgramma terminato\n");
-
-        if (shared_memory[2] != 0)
-        {
-            kill(shared_memory[2], SIGUSR1);
-        }
-
-        shared_memory[6] = 3;
         cleanup();
         exit(0);
     }
 }
 
-// Gestore TIMER
-void sig_handle_timer(int sig)
+void sig_server_closed(int sig)
 {
-    // Segnala la scadenza del timer
-    printf("\nTempo scaduto! Hai perso la tua mossa.\n");
-}
-
-void sig_handle_termination(int sig)
-{
-    if (sig == SIGTERM)
-    {
-        printf("Ricevuto segnale di terminazione. Chiusura del client.\n");
-
-        // Esegui la pulizia
-        cleanup();
-
-        // Esci
-        exit(0);
-    }
-}
-
-void sig_close(int sig)
-{
-    if (sig == SIGUSR1)
-    {
-        printf("\n");
-        printf("\nIl server è stato disconnesso\n");
-        shared_memory[6] = 3;
-        cleanup();
-        exit(0);
-    }
-
-    if (sig == SIGUSR2)
-    {
-        printf("\nL'altro giocatore ha abbandonato la partita\n");
-        exit(0);
-    }
+    printf("\n");
+    printf("\n - ALERT : Server disconnesso o chiuso forzatamente --\n");
+    cleanup();
+    exit(0);
 }
 
 void startup_controls(int argc, char *argv[])
@@ -120,11 +82,10 @@ void startup_controls(int argc, char *argv[])
     if (argc < 2 || argc > 3)
     {
         fprintf(stderr, "Errore: numero di argomenti non valido.\n");
-        fprintf(stderr, "Utilizzo:\n");
         fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
         fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
         fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     // Controlla il formato corretto degli argomenti
@@ -141,11 +102,10 @@ void startup_controls(int argc, char *argv[])
     else
     {
         fprintf(stderr, "Errore: argomenti non validi.\n");
-        fprintf(stderr, "Utilizzo:\n");
         fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
         fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
         fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 }
 
@@ -243,10 +203,7 @@ int main(int argc, char *argv[])
 {
     startup_controls(argc, argv);    // Controlli di startup
     signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
-    signal(SIGUSR1, sig_close);
-    signal(SIGUSR2, sig_close);
-    signal(SIGTERM, sig_handle_termination);
-    signal(SIGALRM, sig_handle_timer);
+    signal(SIGTERM, sig_server_closed);
 
     // Memoria condivisa
     shmid = shmget(SHM_KEY, SIZE, 0600);

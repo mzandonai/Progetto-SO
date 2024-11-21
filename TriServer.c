@@ -22,6 +22,7 @@
 #define PID2 4
 
 int matrix_dim = 0;
+int board_start = 9;
 
 int timeout = 0;
 char player1;
@@ -91,45 +92,10 @@ void sig_handle_ctrl(int sig)
         printf("\nProgramma terminato\n");
         // Rimozione
 
-        if (shared_memory[PID1] > 0)
-        {
-            printf("Terminazione client1 (PID: %d)\n", shared_memory[PID1]);
-            kill(shared_memory[PID1], SIGUSR1);
-        }
-        if (shared_memory[PID2] > 0)
-        {
-            printf("Terminazione client2 (PID: %d)\n", shared_memory[PID2]);
-            kill(shared_memory[PID2], SIGUSR1);
-        }
+        kill(shared_memory[PID1], SIGTERM);
+        kill(shared_memory[PID2], SIGTERM);
 
         cleanup();
-        exit(0);
-    }
-}
-
-void sig_terminate_all(int sig)
-{
-    if (sig == SIGUSR1)
-    {
-        printf("Un client ha richiesto la terminazione di tutti i processi.\n");
-
-        // Termina entrambi i client
-        if (shared_memory[3] != 0) // PID del client1
-        {
-            printf("Terminazione del client1 (PID: %d)...\n", shared_memory[3]);
-            kill(shared_memory[3], SIGTERM); // Segnale di terminazione al client1
-        }
-
-        if (shared_memory[4] != 0) // PID del client2
-        {
-            printf("Terminazione del client2 (PID: %d)...\n", shared_memory[4]);
-            kill(shared_memory[4], SIGTERM); // Segnale di terminazione al client2
-        }
-
-        // Esegui la pulizia
-        cleanup();
-
-        // Termina il server
         exit(0);
     }
 }
@@ -179,46 +145,56 @@ bool victory()
         for (int j = 0; j < dim; j++)
         {
 
-            if (shared_memory[9 + i * dim + j] != shared_memory[9 + i * dim] ||
-                shared_memory[9 + i * dim] == ' ')
+            if (shared_memory[board_start + i * dim + j] != shared_memory[board_start + i * dim] ||
+                shared_memory[board_start + i * dim] == ' ')
             {
                 row_victory = false;
                 break;
             }
         }
         if (row_victory)
+        {
             return true;
+        }
 
         // controllo colonne
         bool col_victory = true;
         for (int j = 0; j < dim; j++)
         {
-            if (shared_memory[9 + j * dim + i] != shared_memory[9 + i] ||
-                shared_memory[9 + i] == ' ')
+            if (shared_memory[board_start + j * dim + i] != shared_memory[board_start + i] ||
+                shared_memory[board_start + i] == ' ')
             {
                 col_victory = false;
                 break;
             }
         }
         if (col_victory)
+        {
             return true;
+        }
     }
 
-    bool diag_victory1 = false;
-    bool diag_victory2 = false;
-    for (int i = 0; i < dim; i++)
+    // Controllo diagonale principale
+    bool diag_victory1 = true;
+    for (int i = 1; i < dim; i++) // Parto da 1 per confrontare con la prima cella
     {
-        if (
-            shared_memory[9 + i * dim * i] != shared_memory[9] ||
-            shared_memory[9] == ' ')
+        if (shared_memory[board_start + i * dim + i] != shared_memory[board_start] ||
+            shared_memory[board_start] == ' ')
         {
             diag_victory1 = false;
+            break;
         }
+    }
 
-        if (shared_memory[9 + i * dim + (dim - 1 - i)] != shared_memory[9 + (dim - 1)] ||
-            shared_memory[9 + (dim - 1)] == ' ')
+    // Controllo diagonale secondaria
+    bool diag_victory2 = true;
+    for (int i = 1; i < dim; i++) // Parto da 1 per confrontare con la prima cella
+    {
+        if (shared_memory[board_start + i * dim + (dim - 1 - i)] != shared_memory[board_start + (dim - 1)] ||
+            shared_memory[board_start + (dim - 1)] == ' ')
         {
             diag_victory2 = false;
+            break;
         }
     }
 
@@ -230,13 +206,19 @@ bool draw()
 {
     // controllo le celle occupate della matrice
     int dim = shared_memory[8];
-    for (int i = 0; i < dim; i++)
+    int board_sz = dim * dim;
+
+    if (victory())
+        return false;
+
+    for (int i = 0; i < board_sz; i++)
     {
-        if (shared_memory[9 + i] == ' ')
+        if (shared_memory[board_start + i] == ' ')
         {
             return false;
         }
     }
+
     return true;
     // se tutte le celle sono occupate e nessuno ha visto c'è pareggio
 }
@@ -245,7 +227,6 @@ bool draw()
 int main(int argc, char *argv[])
 {
     signal(SIGINT, sig_handle_ctrl);
-    signal(SIGUSR2, sig_terminate_all);
 
     // Controllo iniziale dei parametri
     startup_controls(argc, argv);
@@ -284,14 +265,15 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 end)
-    shared_memory[7] = timeout;    // timeout
-    shared_memory[8] = matrix_dim; // dimensione matrice
+    shared_memory[6] = 0;          // stato del gioco client1 (0 start, 1 vittoria, 2 pareggio, 3 )
+    shared_memory[7] = 0;          // stato del gioco client2 (0 start, 1 vittoria, 2 pareggio, 3 )
+    shared_memory[8] = timeout;    // timeout
+    shared_memory[9] = matrix_dim; // dimensione matrice
 
     int board_sz = matrix_dim * matrix_dim;
     for (int i = 0; i < board_sz; i++)
     {
-        shared_memory[9 + i] = ' ';
+        shared_memory[board_start + i] = ' ';
     }
 
     // Creazione semaforo
@@ -348,18 +330,14 @@ int main(int argc, char *argv[])
         if (victory())
         {
             printf("Un giocatore ha vinto\n");
-            shared_memory[6] = 1;
-            kill(shared_memory[PID1], SIGUSR1);
-            kill(shared_memory[PID2], SIGUSR1);
+            shared_memory[6] = 1; // Vittoria
             break;
         }
 
         if (draw())
         {
             printf("Pareggio!\n");
-            shared_memory[6] = 2;               // Stato: pareggio
-            kill(shared_memory[PID1], SIGUSR1); // Notifica al client 1
-            kill(shared_memory[PID2], SIGUSR1); // Notifica al client 2
+            shared_memory[6] = 2; // Stato: pareggio
             break;
         }
 
