@@ -22,7 +22,7 @@
 #define PID2 4
 
 int matrix_dim = 0;
-int board_start = 9;
+int board_start = 9; // inizio della matrice in mem
 
 int timeout = 0;
 char player1;
@@ -41,6 +41,11 @@ void cleanup();
 // Controllo iniziale
 void startup_controls(int argc, char *argv[])
 {
+    /*
+        TO DO:
+        Controllo inserimento interi invece di caratteri
+    */
+
     if (argc < 4)
     {
         printf("Utilizzo: ./TriServer <timeout> <simbolo 1> <simbolo 2>\n");
@@ -265,11 +270,11 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco client1 (0 start, 1 vittoria, 2 pareggio, 3 )
-    shared_memory[7] = 0;          // stato del gioco client2 (0 start, 1 vittoria, 2 pareggio, 3 )
-    shared_memory[8] = timeout;    // timeout
-    shared_memory[9] = matrix_dim; // dimensione matrice
+    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 )
+    shared_memory[7] = timeout;    // timeout
+    shared_memory[8] = matrix_dim; // dimensione matrice
 
+    // Init della matrice
     int board_sz = matrix_dim * matrix_dim;
     for (int i = 0; i < board_sz; i++)
     {
@@ -318,7 +323,6 @@ int main(int argc, char *argv[])
     shared_memory[6] = 0; // Gioco iniziato
     while (1)
     {
-
         /*
             shared_memory[6] = 0 // gioco iniziato
             shared_memory[6] = 1 // vittoria

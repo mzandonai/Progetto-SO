@@ -18,9 +18,6 @@
 #define SEM_KEY 8765
 #define SIZE 1024
 
-#define VICTORY
-#define GAME_OVER
-
 #define PID1 3
 #define PID2 4
 
@@ -30,13 +27,13 @@ int shmid;
 int *shared_memory;
 char symbol;
 int player;
+int board_start = 9;
 struct sembuf sb;
 
 bool timer_expired = false;
 int ctrl_count = 0; // CTRL + C contatore
 
 bool bot = false; // giocatore automatico
-bool asterisk = false;
 
 // Cancellazione del segmento di memoria
 void cleanup()
@@ -63,15 +60,16 @@ void sig_handle_ctrl(int sig)
     else
     {
         printf("\nProgramma terminato\n");
+        // Segnale kill
         cleanup();
         exit(0);
     }
 }
 
-void sig_server_closed(int sig)
+void sig_server_closed(int sig) // SIGTERM
 {
     printf("\n");
-    printf("\n - ALERT : Server disconnesso o chiuso forzatamente --\n");
+    printf("\n - ALERT : Server disconnesso o chiuso forzatamente -\n");
     cleanup();
     exit(0);
 }
@@ -128,7 +126,7 @@ void correct_move()
             // Genera una mossa casuale
             row = rand() % dim;
             col = rand() % dim;
-            int index = 9 + row * dim + col; // Calcola l'indice nella memoria condivisa
+            int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
 
             if (shared_memory[index] == ' ')
             {
@@ -148,8 +146,8 @@ void correct_move()
 
             if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
             {
-                int index = 9 + row * dim + col; // Calcola l'indice nella memoria condivisa
-                if (shared_memory[index] == ' ') // Controlla che la cella sia vuota
+                int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
+                if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
                 {
                     // Inserisce il simbolo corretto per il giocatore
                     shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
@@ -180,7 +178,7 @@ void print_matrix()
     {
         for (int j = 0; j < dim; j++)
         {
-            char cell = shared_memory[9 + i * dim + j];
+            char cell = shared_memory[board_start + i * dim + j];
             printf(" %c ", cell == ' ' ? '.' : cell); // Mostra '.' per celle vuote
             if (j < dim - 1)
                 printf("|");
@@ -232,7 +230,7 @@ int main(int argc, char *argv[])
         // ogni client che viene eseguito fa un'operazione di incremento sul semaforo semid,
         // quando vengono eseguiti 2 client allora il semaforo va a 0 e il server continua
     */
-    if (bot == false && asterisk == false)
+    if (bot == false)
     {
         sb.sem_op = 1;
         semop(semid, &sb, 1);
@@ -278,17 +276,6 @@ int main(int argc, char *argv[])
     int last_turn = -1;
     while (1)
     {
-        if (shared_memory[6] == 1)
-        {
-            printf("Hai vinto\n");
-            break;
-        }
-        else if (shared_memory[6] == 2)
-        {
-            printf("Pareggio\n");
-            break;
-        }
-
         if (shared_memory[5] != last_turn)
         {
             print_matrix();
