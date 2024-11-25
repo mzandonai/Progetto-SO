@@ -105,6 +105,24 @@ void sig_handle_ctrl(int sig)
     }
 }
 
+void sig_client_closed(int sig)
+{
+    printf("\n - ALERT : Client ha abbandonato\n");
+    kill(shared_memory[PID1], SIGUSR1);
+    kill(shared_memory[PID2], SIGUSR1);
+    cleanup();
+    exit(0);
+}
+
+void sig_client_timer(int sig)
+{
+    printf("\n - ALERT : Un client ha perso la mossa [timeout]\n");
+    kill(shared_memory[PID1], SIGUSR2);
+    kill(shared_memory[PID2], SIGUSR2);
+    cleanup();
+    exit(0);
+}
+
 // Cancellazione del segmento di memoria
 void cleanup()
 {
@@ -232,13 +250,22 @@ bool draw()
 int main(int argc, char *argv[])
 {
     signal(SIGINT, sig_handle_ctrl);
+    signal(SIGUSR1, sig_client_closed);
 
     // Controllo iniziale dei parametri
     startup_controls(argc, argv);
 
-    // Richiesta dimensione matrice
-    printf("\nInserisci la dimensione della matrice: ");
-    scanf("%i", &matrix_dim);
+    do
+    {
+        printf("\nInserisci la dimensione della matrice (min 3): ");
+        scanf("%i", &matrix_dim);
+
+        if (matrix_dim < 3)
+        {
+            printf("ERRORE - La dimensione del tabellone deve essere almeno 3\n");
+        }
+
+    } while (matrix_dim < 3);
 
     // Creazione memoria condivisa
     shmid = shmget(SHM_KEY, SIZE, IPC_CREAT | 0660);
@@ -249,7 +276,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        printf("Memoria creata\n");
+        printf("\nMEM - Done | ");
     }
 
     shared_memory = (int *)shmat(shmid, NULL, 0);
@@ -260,7 +287,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        printf("Spazio di memoria creato\n");
+        printf("MEM - Done | ");
     }
 
     /* inizializzazione shared memory */
@@ -290,7 +317,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        printf("Semaforo creato\n");
+        printf("SEM - Done\n");
     }
 
     /*

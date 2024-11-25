@@ -30,7 +30,6 @@ int player;
 int board_start = 9;
 struct sembuf sb;
 
-bool timer_expired = false;
 int ctrl_count = 0; // CTRL + C contatore
 
 bool bot = false; // giocatore automatico
@@ -59,17 +58,40 @@ void sig_handle_ctrl(int sig)
     }
     else
     {
-        printf("\nProgramma terminato\n");
+        printf("\n - ALERT : Programma terminato\n");
         // Segnale kill
+        kill(shared_memory[2], SIGUSR1);
         cleanup();
         exit(0);
     }
+}
+
+void sig_client_closed(int sig)
+{
+    printf("\n - ALERT : Il tuo avversario ha abbandonato\n");
+    cleanup();
+    exit(0);
 }
 
 void sig_server_closed(int sig) // SIGTERM
 {
     printf("\n");
     printf("\n - ALERT : Server disconnesso o chiuso forzatamente -\n");
+    cleanup();
+    exit(0);
+}
+
+void sig_handle_timeout(int sig)
+{
+    printf("\n - ALERT : Timer scaduto\n");
+    kill(shared_memory[2], SIGUSR2);
+    cleanup();
+    exit(0);
+}
+
+void sig_handle_sigusr2(int sig)
+{
+    printf("\n - ALERT : Il tuo avversario ha perso la mossa [timeout]\n");
     cleanup();
     exit(0);
 }
@@ -89,7 +111,6 @@ void startup_controls(int argc, char *argv[])
     // Controlla il formato corretto degli argomenti
     if (argc == 2)
     {
-        printf("Modalità giocatore doppio attiva.\n");
         bot = false; // Modalità giocatore reale
     }
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
@@ -114,55 +135,39 @@ void correct_move()
     bool valid_move = false;    // Mossa valida messa a false
 
     // Timer
-    timer_expired = false; // Timer reset
     alarm(shared_memory[7]);
 
-    if (bot)
+    while (!valid_move)
     {
-        printf("Il bot sta effettuando la sua mossa...\n");
-        srand(time(NULL));
-        while (!valid_move)
+        if (bot)
         {
-            // Genera una mossa casuale
             row = rand() % dim;
             col = rand() % dim;
-            int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
-
-            if (shared_memory[index] == ' ')
-            {
-                shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
-                printf("Il bot ha giocato in posizione (%d, %d)\n", row, col);
-                valid_move = true;
-                alarm(0);
-            }
         }
-    }
-    else
-    {
-        while (!valid_move)
+        else
         {
             printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
             scanf("%d %d", &row, &col);
+        }
 
-            if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
+        if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
+        {
+            int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
+            if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
             {
-                int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
-                if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
-                {
-                    // Inserisce il simbolo corretto per il giocatore
-                    shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
-                    valid_move = true;
-                    alarm(0);
-                }
-                else
-                {
-                    printf("Cella già occupata. Riprova.\n");
-                }
+                // Inserisce il simbolo corretto per il giocatore
+                shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
+                valid_move = true;
+                alarm(0);
             }
-            else
+            else if (!bot)
             {
-                printf("Mossa non valida. Riprova.\n");
+                printf("Cella già occupata. Riprova.\n");
             }
+        }
+        else if (!bot)
+        {
+            printf("Mossa non valida. Riprova.\n");
         }
     }
 
@@ -199,9 +204,12 @@ void print_matrix()
 
 int main(int argc, char *argv[])
 {
-    startup_controls(argc, argv);    // Controlli di startup
-    signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
-    signal(SIGTERM, sig_server_closed);
+    startup_controls(argc, argv);       // Controlli di startup
+    signal(SIGINT, sig_handle_ctrl);    // Gestore del CTRL + C
+    signal(SIGTERM, sig_server_closed); // Gestore chiusura Server
+    signal(SIGUSR1, sig_client_closed);
+    signal(SIGUSR2, sig_handle_sigusr2);
+    signal(SIGALRM, sig_handle_timeout); // Gestione timer
 
     // Memoria condivisa
     shmid = shmget(SHM_KEY, SIZE, 0600);
@@ -210,6 +218,7 @@ int main(int argc, char *argv[])
         perror("Errore durante la connessione alla memoria\n");
         exit(EXIT_FAILURE);
     }
+
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
@@ -225,11 +234,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    /*
-        Gioco in coppia
-        // ogni client che viene eseguito fa un'operazione di incremento sul semaforo semid,
-        // quando vengono eseguiti 2 client allora il semaforo va a 0 e il server continua
-    */
     if (bot == false)
     {
         sb.sem_op = 1;
@@ -253,24 +257,38 @@ int main(int argc, char *argv[])
             symbol = shared_memory[1];
             player = 1;
         }
-        printf("Il tuo simbolo è %c\n", symbol);
+        printf("\nIl tuo simbolo è %c\n", symbol);
     }
     else
     {
-        if (!bot)
+        pid_t pid = fork();
+        if (pid == 0)
         {
-            symbol = shared_memory[0];
-            player = 0;
-            printf("Sta giocando contro il bot\n");
-            printf("Questo è il tuo simbolo: %c\n", symbol);
-        }
-        else
-        {
+            printf("Bot creato\n");
+            // simbolo
             symbol = shared_memory[1];
+            // player
             player = 1;
+
+            while (1)
+            {
+                printf("Il bot fa la mossa...\n");
+                // Mossa
+                correct_move();
+                sleep(2);
+            }
         }
-        sb.sem_op = 2;
-        semop(semid, &sb, 1);
+        else if (pid > 0)
+        {
+            // simbolo
+            symbol = shared_memory[0];
+            // player
+            player = 0;
+
+            printf("Sta giocando contro il bot con %c\n", symbol);
+            sb.sem_op = 2;
+            semop(semid, &sb, 1); // Segnala l'inizio del gioco
+        }
     }
 
     int last_turn = -1;
