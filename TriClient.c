@@ -68,6 +68,7 @@ void sig_handle_ctrl(int sig)
 
 void sig_client_closed(int sig)
 {
+    printf("\n");
     printf("\n - ALERT : Il tuo avversario ha abbandonato\n");
     cleanup();
     exit(0);
@@ -83,6 +84,7 @@ void sig_server_closed(int sig) // SIGTERM
 
 void sig_handle_timeout(int sig)
 {
+    printf("\n");
     printf("\n - ALERT : Timer scaduto\n");
     kill(shared_memory[2], SIGUSR2);
     cleanup();
@@ -91,6 +93,7 @@ void sig_handle_timeout(int sig)
 
 void sig_handle_sigusr2(int sig)
 {
+    printf("\n");
     printf("\n - ALERT : Il tuo avversario ha perso la mossa [timeout]\n");
     cleanup();
     exit(0);

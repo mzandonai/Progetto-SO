@@ -108,8 +108,16 @@ void sig_handle_ctrl(int sig)
 void sig_client_closed(int sig)
 {
     printf("\n - ALERT : Client ha abbandonato\n");
-    kill(shared_memory[PID1], SIGUSR1);
-    kill(shared_memory[PID2], SIGUSR1);
+    if (kill(shared_memory[PID1], 0) == 0)
+    {
+        kill(shared_memory[PID1], SIGUSR1);
+    }
+
+    if (kill(shared_memory[PID2], 0) == 0)
+    {
+        kill(shared_memory[PID2], SIGUSR1);
+    }
+
     cleanup();
     exit(0);
 }
@@ -117,8 +125,16 @@ void sig_client_closed(int sig)
 void sig_client_timer(int sig)
 {
     printf("\n - ALERT : Un client ha perso la mossa [timeout]\n");
-    kill(shared_memory[PID1], SIGUSR2);
-    kill(shared_memory[PID2], SIGUSR2);
+    if (kill(shared_memory[PID1], 0) == 0)
+    {
+        kill(shared_memory[PID1], SIGUSR2);
+    }
+
+    if (kill(shared_memory[PID2], 0) == 0)
+    {
+        kill(shared_memory[PID2], SIGUSR2);
+    }
+
     cleanup();
     exit(0);
 }
