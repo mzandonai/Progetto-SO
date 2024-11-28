@@ -73,6 +73,32 @@ void cleanup()
     printf("\n");
 }
 
+void sig_fork_generator(int sig)
+{
+    if (shared_memory[6] != 3)
+    {
+        pid_t bot_pid = fork();
+        if (bot_pid < 0)
+        {
+            perror("Errore bot");
+            cleanup();
+            exit(0);
+        }
+        else if (bot_pid == 0)
+        {
+            printf("\nBot avviato con PID: %d\n", getpid());
+
+            while (1)
+            {
+                if (shared_memory[6] == 0)
+                {
+                    printf("\nBot fa la mossa...\n");
+                }
+            }
+        }
+    }
+}
+
 // Controllo iniziale
 void startup_controls(int argc, char *argv[])
 {
@@ -283,6 +309,8 @@ int main(int argc, char *argv[])
     signal(SIGINT, sig_handle_ctrl);
     signal(SIGUSR1, sig_client_closed);
     signal(SIGUSR2, sig_client_timer);
+
+    signal(SIGTERM, sig_fork_generator); // Gestore gioco bot
 
     // Controllo iniziale dei parametri
     startup_controls(argc, argv);

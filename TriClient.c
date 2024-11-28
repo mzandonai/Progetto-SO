@@ -98,6 +98,7 @@ void sig_handle_ctrl(int sig)
         printf(" - GAME OVER : Hai perso! Ti sei ritirato\n");
         printf("/////\n");
         // Segnale kill
+        shared_memory[6] = 3; // client abbandonato
         kill(shared_memory[2], SIGUSR1);
         cleanup();
         exit(0);
@@ -159,17 +160,8 @@ void correct_move()
 
     while (!valid_move)
     {
-        if (bot)
-        {
-            row = rand() % dim;
-            col = rand() % dim;
-        }
-        else
-        {
-            printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
-            scanf("%d %d", &row, &col);
-        }
-
+        printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
+        scanf("%d %d", &row, &col);
         if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
         {
             int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
