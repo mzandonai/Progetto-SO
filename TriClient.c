@@ -30,9 +30,11 @@ int player;
 int board_start = 9;
 struct sembuf sb;
 
+int timeout = 0;
 int ctrl_count = 0; // CTRL + C contatore
 
 bool bot = false; // giocatore automatico
+bool computer = false;
 
 // Cancellazione del segmento di memoria
 void cleanup()
@@ -48,57 +50,7 @@ void cleanup()
     }
 }
 
-// Gestore del CTRL + L
-void sig_handle_ctrl(int sig)
-{
-    if (ctrl_count == 0)
-    {
-        printf("\nHai premuto CTRL+C, premi di nuovo per terminare\n");
-        ctrl_count++;
-    }
-    else
-    {
-        printf("\n - ALERT : Programma terminato\n");
-        // Segnale kill
-        kill(shared_memory[2], SIGUSR1);
-        cleanup();
-        exit(0);
-    }
-}
-
-void sig_client_closed(int sig)
-{
-    printf("\n");
-    printf("\n - ALERT : Il tuo avversario ha abbandonato\n");
-    cleanup();
-    exit(0);
-}
-
-void sig_server_closed(int sig) // SIGTERM
-{
-    printf("\n");
-    printf("\n - ALERT : Server disconnesso o chiuso forzatamente -\n");
-    cleanup();
-    exit(0);
-}
-
-void sig_handle_timeout(int sig)
-{
-    printf("\n");
-    printf("\n - ALERT : Timer scaduto\n");
-    kill(shared_memory[2], SIGUSR2);
-    cleanup();
-    exit(0);
-}
-
-void sig_handle_sigusr2(int sig)
-{
-    printf("\n");
-    printf("\n - ALERT : Il tuo avversario ha perso la mossa [timeout]\n");
-    cleanup();
-    exit(0);
-}
-
+// Controlli iniziali
 void startup_controls(int argc, char *argv[])
 {
     // Controlla il numero di argomenti forniti
@@ -129,6 +81,71 @@ void startup_controls(int argc, char *argv[])
         fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
         exit(0);
     }
+}
+
+// Gestore del CTRL + L --> SIGURS1
+void sig_handle_ctrl(int sig)
+{
+    if (ctrl_count == 0)
+    {
+        printf("\nHai premuto CTRL+C, premi di nuovo per terminare\n");
+        ctrl_count++;
+    }
+    else
+    {
+        printf("\n");
+        printf("/////\n");
+        printf(" - GAME OVER : Hai perso! Ti sei ritirato\n");
+        printf("/////\n");
+        // Segnale kill
+        kill(shared_memory[2], SIGUSR1);
+        cleanup();
+        exit(0);
+    }
+}
+
+// Ricevuto SIGUSR1 chiude il client
+void sig_client_closed(int sig) // SIGUSR1
+{
+    printf("\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Hai vinto! Il tuo avversario ha abbandonato\n");
+    printf("/////\n");
+    cleanup();
+    exit(0);
+}
+
+// Ricevuto SIGTERM chiude il client
+void sig_server_closed(int sig) // SIGTERM
+{
+    printf("\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Partita terminata forzatamente\n");
+    printf("/////\n");
+    cleanup();
+    exit(0);
+}
+
+// Quando il timer scade avvisa il server con SIGUSR2
+void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
+{
+    printf("\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Hai perso! Timer scaduto\n");
+    printf("/////\n");
+    kill(shared_memory[2], SIGUSR2);
+    cleanup();
+    exit(0);
+}
+
+void sig_receive_timeout(int sig)
+{
+    printf("\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Hai vinto per timeout!\n");
+    printf("/////\n");
+    cleanup();
+    exit(0);
 }
 
 void correct_move()
@@ -207,26 +224,29 @@ void print_matrix()
 
 int main(int argc, char *argv[])
 {
-    startup_controls(argc, argv);       // Controlli di startup
-    signal(SIGINT, sig_handle_ctrl);    // Gestore del CTRL + C
+    startup_controls(argc, argv); // Controlli di startup
+
+    signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
+
     signal(SIGTERM, sig_server_closed); // Gestore chiusura Server
-    signal(SIGUSR1, sig_client_closed);
-    signal(SIGUSR2, sig_handle_sigusr2);
-    signal(SIGALRM, sig_handle_timeout); // Gestione timer
+    signal(SIGUSR1, sig_client_closed); // Gestore chiusura Client
+
+    signal(SIGALRM, sig_handle_timeout);  // Gestione timer
+    signal(SIGUSR2, sig_receive_timeout); // Gestore ricezione da server
 
     // Memoria condivisa
     shmid = shmget(SHM_KEY, SIZE, 0600);
     if (shmid == -1)
     {
         perror("Errore durante la connessione alla memoria\n");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
         perror("Errore nel collegamento alla memoria\n");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     // Semafori
@@ -234,18 +254,24 @@ int main(int argc, char *argv[])
     if (semid == -1)
     {
         perror("Errore nella connessione al semaforo\n");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
-    if (bot == false)
+    // Ottengo il timeout impostato:
+    timeout = shared_memory[7];
+
+    if (!computer && !bot)
     {
         sb.sem_op = 1;
         semop(semid, &sb, 1);
         semval = semctl(semid, 0, GETVAL);
+
         if (semval == 1)
         {
             shared_memory[PID1] = getpid();
-            printf("In attesa di un altro giocatore...\n");
+            printf("\n");
+            printf("\nIn attesa di un altro giocatore...\n");
+            printf("\n");
             symbol = shared_memory[0];
             player = 0;
             sb.sem_op--;
@@ -257,41 +283,33 @@ int main(int argc, char *argv[])
         else
         {
             shared_memory[PID2] = getpid();
+            printf("\n");
+            printf("\nSei il secondo giocatore...\n");
+            printf("\n");
             symbol = shared_memory[1];
             player = 1;
         }
+
+        printf("\n");
         printf("\nIl tuo simbolo è %c\n", symbol);
+        printf("\n");
     }
     else
     {
-        pid_t pid = fork();
-        if (pid == 0)
+        if (!computer)
         {
-            printf("Bot creato\n");
-            // simbolo
-            symbol = shared_memory[1];
-            // player
-            player = 1;
-
-            while (1)
-            {
-                printf("Il bot fa la mossa...\n");
-                // Mossa
-                correct_move();
-                sleep(2);
-            }
-        }
-        else if (pid > 0)
-        {
-            // simbolo
             symbol = shared_memory[0];
-            // player
             player = 0;
-
-            printf("Sta giocando contro il bot con %c\n", symbol);
-            sb.sem_op = 2;
-            semop(semid, &sb, 1); // Segnala l'inizio del gioco
+            printf("\nIl tuo simbolo è: %c\n", symbol);
         }
+        else
+        {
+            symbol = shared_memory[1];
+            player = 1;
+        }
+
+        sb.sem_op = 2;
+        semop(semid, &sb, 1);
     }
 
     int last_turn = -1;

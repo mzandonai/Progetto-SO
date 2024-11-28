@@ -36,7 +36,42 @@ int shmid;
 int *shared_memory;
 struct sembuf sop = {0, 0, 0};
 
-void cleanup();
+// Cancellazione del segmento di memoria
+void cleanup()
+{
+    // Deallocazione memoria condivisa
+    if (shmdt(shared_memory) == -1)
+    {
+        perror("Errore durante la deallocazione della memoria condivisa (shmdt)");
+    }
+    else
+    {
+        printf("\n");
+        printf("MEM - Done ");
+    }
+
+    // Rimuove area di memoria condivisa
+    if (shmctl(shmid, IPC_RMID, NULL) == -1)
+    {
+        perror("Errore durante la rimozione dell'area di memoria condivisa (shmctl)");
+    }
+    else
+    {
+        printf("| MEM - Done ");
+    }
+
+    // Deallocazione semaforo
+    if (semctl(semid, 0, IPC_RMID) == -1)
+    {
+        perror("Errore durante la deallocazione del semaforo (semctl)");
+    }
+    else
+    {
+        printf("| SEM - Done\n");
+    }
+
+    printf("\n");
+}
 
 // Controllo iniziale
 void startup_controls(int argc, char *argv[])
@@ -84,7 +119,7 @@ void startup_controls(int argc, char *argv[])
     printf("Player 2: %c\n", player2);
 }
 
-// Gestione del CTRL + C
+// Gestione del CTRL + C --> SIGTERM
 void sig_handle_ctrl(int sig)
 {
     if (ctrl_count == 0)
@@ -96,18 +131,30 @@ void sig_handle_ctrl(int sig)
     {
         printf("\nProgramma terminato\n");
         // Rimozione
+        if (kill(shared_memory[PID1], 0) == 0)
+        {
+            kill(shared_memory[PID1], SIGTERM);
+        }
 
-        kill(shared_memory[PID1], SIGTERM);
-        kill(shared_memory[PID2], SIGTERM);
+        if (kill(shared_memory[PID2], 0) == 0)
+        {
+            kill(shared_memory[PID2], SIGTERM);
+        }
 
         cleanup();
         exit(0);
     }
 }
 
+/* Gestore della chiusura del client
+    Quando il client si chiude viene mandato
+    un SIGUSR1 al client ancora aperto
+*/
 void sig_client_closed(int sig)
 {
-    printf("\n - ALERT : Client ha abbandonato\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Un giocatore ha abbandonato\n");
+    printf("/////\n");
     if (kill(shared_memory[PID1], 0) == 0)
     {
         kill(shared_memory[PID1], SIGUSR1);
@@ -124,7 +171,9 @@ void sig_client_closed(int sig)
 
 void sig_client_timer(int sig)
 {
-    printf("\n - ALERT : Un client ha perso la mossa [timeout]\n");
+    printf("/////\n");
+    printf(" - GAME OVER : Un client ha perso per timeout\n");
+    printf("/////\n");
     if (kill(shared_memory[PID1], 0) == 0)
     {
         kill(shared_memory[PID1], SIGUSR2);
@@ -137,40 +186,6 @@ void sig_client_timer(int sig)
 
     cleanup();
     exit(0);
-}
-
-// Cancellazione del segmento di memoria
-void cleanup()
-{
-    // Deallocazione memoria condivisa
-    if (shmdt(shared_memory) == -1)
-    {
-        perror("Errore durante la deallocazione della memoria condivisa (shmdt)");
-    }
-    else
-    {
-        printf("Memoria condivisa deallocata con successo.\n");
-    }
-
-    // Rimuove area di memoria condivisa
-    if (shmctl(shmid, IPC_RMID, NULL) == -1)
-    {
-        perror("Errore durante la rimozione dell'area di memoria condivisa (shmctl)");
-    }
-    else
-    {
-        printf("Area di memoria condivisa rimossa con successo.\n");
-    }
-
-    // Deallocazione semaforo
-    if (semctl(semid, 0, IPC_RMID) == -1)
-    {
-        perror("Errore durante la deallocazione del semaforo (semctl)");
-    }
-    else
-    {
-        printf("Semaforo deallocato con successo.\n");
-    }
 }
 
 // Controllo per la vittoria
@@ -267,6 +282,7 @@ int main(int argc, char *argv[])
 {
     signal(SIGINT, sig_handle_ctrl);
     signal(SIGUSR1, sig_client_closed);
+    signal(SIGUSR2, sig_client_timer);
 
     // Controllo iniziale dei parametri
     startup_controls(argc, argv);
