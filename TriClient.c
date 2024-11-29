@@ -94,9 +94,10 @@ void sig_handle_ctrl(int sig)
     else
     {
         printf("\n");
-        printf("/////\n");
-        printf(" - GAME OVER : Hai perso! Ti sei ritirato\n");
-        printf("/////\n");
+        printf("---------------------------------------------------\n");
+        printf("    G A M E   O V E R : Hai perso! Ti sei ritirato\n");
+        printf("---------------------------------------------------\n");
+        printf("\n");
         // Segnale kill
         shared_memory[6] = 3; // client abbandonato
         kill(shared_memory[2], SIGUSR1);
@@ -109,9 +110,10 @@ void sig_handle_ctrl(int sig)
 void sig_client_closed(int sig) // SIGUSR1
 {
     printf("\n");
-    printf("/////\n");
-    printf(" - GAME OVER : Hai vinto! Il tuo avversario ha abbandonato\n");
-    printf("/////\n");
+    printf("---------------------------------------------------------------------\n");
+    printf("    G A M E   O V E R : Hai vinto! Il tuo avvversario ha abbandonato\n");
+    printf("---------------------------------------------------------------------\n");
+    printf("\n");
     cleanup();
     exit(0);
 }
@@ -119,10 +121,31 @@ void sig_client_closed(int sig) // SIGUSR1
 // Ricevuto SIGTERM chiude il client
 void sig_server_closed(int sig) // SIGTERM
 {
-    printf("\n");
-    printf("/////\n");
-    printf(" - GAME OVER : Partita terminata forzatamente\n");
-    printf("/////\n");
+    if (shared_memory[6] == 1)
+    {
+        printf("\n");
+        printf("-------------------------------------------------------\n");
+        printf("    G A M E   O V E R : Vittoria!\n");
+        printf("-------------------------------------------------------\n");
+        printf("\n");
+        exit(0);
+    }
+    else if (shared_memory[6] == 2)
+    {
+        printf("\n");
+        printf("---------------------------------\n");
+        printf("    G A M E   O V E R : Pareggio!\n");
+        printf("---------------------------------\n");
+        printf("\n");
+    }
+    else
+    {
+        printf("\n");
+        printf("-------------------------------------------------------\n");
+        printf("    G A M E   O V E R : Partita terminata forzatamente\n");
+        printf("-------------------------------------------------------\n");
+        printf("\n");
+    }
     cleanup();
     exit(0);
 }
@@ -131,9 +154,10 @@ void sig_server_closed(int sig) // SIGTERM
 void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
 {
     printf("\n");
-    printf("/////\n");
-    printf(" - GAME OVER : Hai perso! Timer scaduto\n");
-    printf("/////\n");
+    printf("-------------------------------------------------\n");
+    printf("    G A M E   O V E R : Hai perso! Timer scaduto\n");
+    printf("-------------------------------------------------\n");
+    printf("\n");
     kill(shared_memory[2], SIGUSR2);
     cleanup();
     exit(0);
@@ -142,9 +166,10 @@ void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
 void sig_receive_timeout(int sig)
 {
     printf("\n");
-    printf("/////\n");
-    printf(" - GAME OVER : Hai vinto per timeout!\n");
-    printf("/////\n");
+    printf("-----------------------------------------------\n");
+    printf("    G A M E   O V E R : Hai vinto per timeout!\n");
+    printf("-----------------------------------------------\n");
+    printf("\n");
     cleanup();
     exit(0);
 }
@@ -189,6 +214,7 @@ void correct_move()
 
 void print_matrix()
 {
+    printf("\n");
     printf("Tabellone corrente: \n");
     int dim = shared_memory[8]; // dimensione della matrice
     for (int i = 0; i < dim; i++)
@@ -288,6 +314,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        kill(shared_memory[2], SIGTERM);
         if (!computer)
         {
             symbol = shared_memory[0];

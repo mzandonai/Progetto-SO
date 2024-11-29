@@ -86,14 +86,11 @@ void sig_fork_generator(int sig)
         }
         else if (bot_pid == 0)
         {
-            printf("\nBot avviato con PID: %d\n", getpid());
-
-            while (1)
+            // exec
+            if (execl("./TriClient", "./TriClient", "bot", "\*", (char *)NULL) == -1)
             {
-                if (shared_memory[6] == 0)
-                {
-                    printf("\nBot fa la mossa...\n");
-                }
+                perror("Errore nella exec");
+                exit(0);
             }
         }
     }
@@ -155,7 +152,9 @@ void sig_handle_ctrl(int sig)
     }
     else
     {
-        printf("\nProgramma terminato\n");
+        printf("----------------------------------------------------\n");
+        printf("    G A M E   O V E R : Partita terminata\n");
+        printf("----------------------------------------------------\n");
         // Rimozione
         if (kill(shared_memory[PID1], 0) == 0)
         {
@@ -172,15 +171,12 @@ void sig_handle_ctrl(int sig)
     }
 }
 
-/* Gestore della chiusura del client
-    Quando il client si chiude viene mandato
-    un SIGUSR1 al client ancora aperto
-*/
+// Gestore della chiusura del client
 void sig_client_closed(int sig)
 {
-    printf("/////\n");
-    printf(" - GAME OVER : Un giocatore ha abbandonato\n");
-    printf("/////\n");
+    printf("----------------------------------------------------\n");
+    printf("    G A M E   O V E R : Un giocatore ha abbandonato\n");
+    printf("----------------------------------------------------\n");
     if (kill(shared_memory[PID1], 0) == 0)
     {
         kill(shared_memory[PID1], SIGUSR1);
@@ -197,9 +193,9 @@ void sig_client_closed(int sig)
 
 void sig_client_timer(int sig)
 {
-    printf("/////\n");
-    printf(" - GAME OVER : Un client ha perso per timeout\n");
-    printf("/////\n");
+    printf("-------------------------------------------------------\n");
+    printf("    G A M E   O V E R : Un client ha perso per timeout\n");
+    printf("-------------------------------------------------------\n");
     if (kill(shared_memory[PID1], 0) == 0)
     {
         kill(shared_memory[PID1], SIGUSR2);
@@ -357,7 +353,7 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 )
+    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 client abbandona)
     shared_memory[7] = timeout;    // timeout
     shared_memory[8] = matrix_dim; // dimensione matrice
 
@@ -422,6 +418,8 @@ int main(int argc, char *argv[])
         {
             printf("Un giocatore ha vinto\n");
             shared_memory[6] = 1; // Vittoria
+            kill(shared_memory[PID1], SIGTERM);
+            kill(shared_memory[PID2], SIGTERM);
             break;
         }
 
@@ -429,6 +427,8 @@ int main(int argc, char *argv[])
         {
             printf("Pareggio!\n");
             shared_memory[6] = 2; // Stato: pareggio
+            kill(shared_memory[PID1], SIGTERM);
+            kill(shared_memory[PID2], SIGTERM);
             break;
         }
 
