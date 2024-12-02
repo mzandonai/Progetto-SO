@@ -123,12 +123,23 @@ void sig_server_closed(int sig) // SIGTERM
 {
     if (shared_memory[6] == 1)
     {
-        printf("\n");
-        printf("-------------------------------------------------------\n");
-        printf("    G A M E   O V E R : Vittoria!\n");
-        printf("-------------------------------------------------------\n");
-        printf("\n");
-        exit(0);
+        if (shared_memory[5] == player)
+        {
+            printf("\n");
+            printf("-------------------------------------------------------\n");
+            printf("    G A M E   O V E R : Hai perso!\n");
+            printf("-------------------------------------------------------\n");
+            printf("\n");
+        }
+        else
+        {
+            printf("\n");
+            printf("-------------------------------------------------------\n");
+            printf("    G A M E   O V E R : Vittoria!\n");
+            printf("-------------------------------------------------------\n");
+            printf("\n");
+            exit(0);
+        }
     }
     else if (shared_memory[6] == 2)
     {
@@ -185,6 +196,8 @@ void correct_move()
 
     while (!valid_move)
     {
+        printf("\n");
+        printf("Il tuo turno (%c)\n", symbol);
         printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
         scanf("%d %d", &row, &col);
         if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
@@ -216,6 +229,7 @@ void print_matrix()
 {
     printf("\n");
     printf("Tabellone corrente: \n");
+    printf("------------------- \n");
     int dim = shared_memory[8]; // dimensione della matrice
     for (int i = 0; i < dim; i++)
     {
@@ -238,6 +252,7 @@ void print_matrix()
             printf("\n");
         }
     }
+    printf("------------------- \n");
 }
 
 int main(int argc, char *argv[])
@@ -342,7 +357,7 @@ int main(int argc, char *argv[])
 
         if (!bot && shared_memory[5] == player)
         {
-            printf("Il tuo turno (%c)\n", symbol);
+
             correct_move();
         }
 
