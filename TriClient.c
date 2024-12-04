@@ -59,7 +59,6 @@ void startup_controls(int argc, char *argv[])
         fprintf(stderr, "Errore: numero di argomenti non valido.\n");
         fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
         fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
-        fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
         exit(0);
     }
 
@@ -78,7 +77,6 @@ void startup_controls(int argc, char *argv[])
         fprintf(stderr, "Errore: argomenti non validi.\n");
         fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
         fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
-        fprintf(stderr, "Nota: Usa l'asterisco escapato (es. \\* o \"*\") per evitare problemi di interpretazione nella shell.\n");
         exit(0);
     }
 }
@@ -257,7 +255,34 @@ void print_matrix()
 
 int main(int argc, char *argv[])
 {
-    startup_controls(argc, argv); // Controlli di startup
+    // startup_controls(argc, argv); // Controlli di startup
+
+    // Controlla il numero di argomenti forniti
+    if (argc < 2 || argc > 3)
+    {
+        fprintf(stderr, "Errore: numero di argomenti non valido.\n");
+        fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
+        fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
+        exit(0);
+    }
+
+    // Controlla il formato corretto degli argomenti
+    if (argc == 2)
+    {
+        bot = false; // Modalità giocatore reale
+    }
+    else if (argc == 3 && strchr(argv[2], '*'))
+    {
+        printf("Modalità bot attiva.\n");
+        bot = true; // Modalità bot
+    }
+    else
+    {
+        fprintf(stderr, "Errore: argomenti non validi.\n");
+        fprintf(stderr, "  Modalità giocatore doppio: ./TriClient <username>\n");
+        fprintf(stderr, "  Modalità bot: ./TriClient <username> *\n");
+        exit(0);
+    }
 
     signal(SIGINT, sig_handle_ctrl); // Gestore del CTRL + C
 

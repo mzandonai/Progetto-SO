@@ -44,20 +44,11 @@ void cleanup()
     {
         perror("Errore durante la deallocazione della memoria condivisa (shmdt)");
     }
-    else
-    {
-        printf("\n");
-        printf("MEM - Done ");
-    }
 
     // Rimuove area di memoria condivisa
     if (shmctl(shmid, IPC_RMID, NULL) == -1)
     {
         perror("Errore durante la rimozione dell'area di memoria condivisa (shmctl)");
-    }
-    else
-    {
-        printf("| MEM - Done ");
     }
 
     // Deallocazione semaforo
@@ -65,14 +56,10 @@ void cleanup()
     {
         perror("Errore durante la deallocazione del semaforo (semctl)");
     }
-    else
-    {
-        printf("| SEM - Done\n");
-    }
-
     printf("\n");
 }
 
+// Generatore del bot
 void sig_fork_generator(int sig)
 {
     if (shared_memory[6] != 3)
@@ -87,7 +74,7 @@ void sig_fork_generator(int sig)
         else if (bot_pid == 0)
         {
             // exec
-            if (execl("./TriClient", "./TriClient", "bot", "\*", (char *)NULL) == -1)
+            if (execlp("./TriClient", "./TriClient", "bot", NULL) == -1)
             {
                 perror("Errore nella exec");
                 exit(0);
@@ -191,6 +178,7 @@ void sig_client_closed(int sig)
     exit(0);
 }
 
+// Gestore del timer
 void sig_client_timer(int sig)
 {
     printf("-------------------------------------------------------\n");
@@ -330,20 +318,12 @@ int main(int argc, char *argv[])
         perror("shmget");
         exit(EXIT_FAILURE);
     }
-    else
-    {
-        printf("\nMEM - Done | ");
-    }
 
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
         perror("shmat");
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        printf("MEM - Done | ");
     }
 
     /* inizializzazione shared memory */
@@ -370,10 +350,6 @@ int main(int argc, char *argv[])
     {
         perror("semget");
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        printf("SEM - Done\n");
     }
 
     /*
