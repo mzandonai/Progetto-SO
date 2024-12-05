@@ -74,11 +74,7 @@ void sig_fork_generator(int sig)
         else if (bot_pid == 0)
         {
             // exec
-            if (execlp("./TriClient", "./TriClient", "bot", NULL) == -1)
-            {
-                perror("Errore nella exec");
-                exit(0);
-            }
+            execl("./TriClient", "./TriClient", "bot", (char *)NULL);
         }
     }
 }

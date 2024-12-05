@@ -269,14 +269,15 @@ int main(int argc, char *argv[])
     shmid = shmget(SHM_KEY, SIZE, 0600);
     if (shmid == -1)
     {
-        perror("Errore durante la connessione alla memoria\n");
+        printf("Errore durante la connessione alla memoria\n");
         exit(0);
     }
 
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
-        perror("Errore nel collegamento alla memoria\n");
+        
+        printf("Errore nel collegamento alla memoria\n");
         exit(0);
     }
 
@@ -284,7 +285,7 @@ int main(int argc, char *argv[])
     semid = semget(SEM_KEY, 1, 0600);
     if (semid == -1)
     {
-        perror("Errore nella connessione al semaforo\n");
+        printf("ERRORE: Errore nella connessione al semaforo\n");
         exit(0);
     }
 
@@ -306,7 +307,7 @@ int main(int argc, char *argv[])
             symbol = shared_memory[0];
             player = 0;
             sb.sem_op--;
-            while (semval != 0)
+            while (semval != 0) 
             {
                 semval = semctl(semid, 0, GETVAL);
             }
