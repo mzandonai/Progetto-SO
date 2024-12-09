@@ -1,4 +1,8 @@
-/* TRICLIENT */
+/*************************************
+ *Matricola
+ * Matteo Zandonai
+ * 09/12/2024
+ *************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -69,8 +73,8 @@ void startup_controls(int argc, char *argv[])
     }
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
     {
-        printf("Modalità bot attiva.\n");
         bot = true; // Modalità bot
+        printf("Modalità bot attiva.\n");
     }
     else
     {
@@ -276,7 +280,7 @@ int main(int argc, char *argv[])
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
-        
+
         printf("Errore nel collegamento alla memoria\n");
         exit(0);
     }
@@ -307,7 +311,7 @@ int main(int argc, char *argv[])
             symbol = shared_memory[0];
             player = 0;
             sb.sem_op--;
-            while (semval != 0) 
+            while (semval != 0)
             {
                 semval = semctl(semid, 0, GETVAL);
             }
@@ -328,7 +332,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        kill(shared_memory[2], SIGTERM);
+        // kill(shared_memory[2], SIGTERM);
         if (!computer)
         {
             symbol = shared_memory[0];
@@ -354,9 +358,8 @@ int main(int argc, char *argv[])
             last_turn = shared_memory[5];
         }
 
-        if (!bot && shared_memory[5] == player)
+        if (shared_memory[5] == player)
         {
-
             correct_move();
         }
 

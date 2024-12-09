@@ -1,4 +1,8 @@
-/*  TRISERVER */
+/*************************************
+ * VR473622
+ * Matteo Zandonai
+ * 09/12/2024
+ *************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,7 +31,7 @@ int board_start = 9; // inizio della matrice in mem
 int timeout = 0;
 char player1;
 char player2;
-bool bot = false;
+bool computer = false;
 
 int ctrl_count = 0;
 
@@ -74,6 +78,7 @@ void sig_fork_generator(int sig)
         else if (bot_pid == 0)
         {
             // exec
+            computer = true;
             execl("./TriClient", "./TriClient", "bot", (char *)NULL);
         }
     }
