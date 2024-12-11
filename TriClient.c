@@ -37,8 +37,8 @@ struct sembuf sb;
 int timeout = 0;
 int ctrl_count = 0; // CTRL + C contatore
 
-bool bot = false; // giocatore automatico
-bool computer = false;
+bool asterisco = false; // giocatore automatico
+bool sono_CPU = false;
 
 // Cancellazione del segmento di memoria
 void cleanup()
@@ -69,11 +69,11 @@ void startup_controls(int argc, char *argv[])
     // Controlla il formato corretto degli argomenti
     if (argc == 2)
     {
-        bot = false; // Modalità giocatore reale
+        asterisco = false; // Modalità giocatore reale
     }
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
     {
-        bot = true; // Modalità bot
+        asterisco = true; // Modalità bot
         printf("Modalità bot attiva.\n");
     }
     else
@@ -195,7 +195,7 @@ void correct_move()
 
     // Timer
     alarm(shared_memory[7]);
-
+    
     while (!valid_move)
     {
         printf("\n");
@@ -212,12 +212,12 @@ void correct_move()
                 valid_move = true;
                 alarm(0);
             }
-            else if (!bot)
+            else if (!asterisco)
             {
                 printf("Cella già occupata. Riprova.\n");
             }
         }
-        else if (!bot)
+        else if (!asterisco)
         {
             printf("Mossa non valida. Riprova.\n");
         }
@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
     // Ottengo il timeout impostato:
     timeout = shared_memory[7];
 
-    if (!computer && !bot)
+    if (!asterisco && !sono_CPU)
     {
         sb.sem_op = 1;
         semop(semid, &sb, 1);
@@ -305,6 +305,7 @@ int main(int argc, char *argv[])
         if (semval == 1)
         {
             shared_memory[PID1] = getpid();
+            printf("Giocatore 1 PID: %d\n", shared_memory[PID1]);
             printf("\n");
             printf("\nIn attesa di un altro giocatore...\n");
             printf("\n");
@@ -319,6 +320,7 @@ int main(int argc, char *argv[])
         else
         {
             shared_memory[PID2] = getpid();
+            printf("Giocatore 2 PID: %d\n", shared_memory[PID2]);
             printf("\n");
             printf("\nSei il secondo giocatore...\n");
             printf("\n");
@@ -332,23 +334,27 @@ int main(int argc, char *argv[])
     }
     else
     {
-        // kill(shared_memory[2], SIGTERM);
-        if (!computer)
+    
+        kill(shared_memory[2], SIGTERM);
+        if (!sono_CPU)
         {
+            printf("Giocatore 1 PID: %d\n", shared_memory[PID1]);
             symbol = shared_memory[0];
             player = 0;
             printf("\nIl tuo simbolo è: %c\n", symbol);
         }
         else
         {
+            printf("Giocatore 2 PID: %d\n", shared_memory[PID2]);
+            //bot giocatore automatico
             symbol = shared_memory[1];
             player = 1;
         }
 
         sb.sem_op = 2;
         semop(semid, &sb, 1);
+    
     }
-
     int last_turn = -1;
     while (1)
     {
