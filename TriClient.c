@@ -195,7 +195,7 @@ void correct_move()
 
     // Timer
     alarm(shared_memory[7]);
-    
+
     while (!valid_move)
     {
         printf("\n");
@@ -334,9 +334,10 @@ int main(int argc, char *argv[])
     }
     else
     {
-    
+
         kill(shared_memory[2], SIGTERM);
-        if (!sono_CPU)
+        int whoami = getpid();
+        if (shared_memory[PID2] = whoami)
         {
             printf("Giocatore 1 PID: %d\n", shared_memory[PID1]);
             symbol = shared_memory[0];
@@ -346,14 +347,13 @@ int main(int argc, char *argv[])
         else
         {
             printf("Giocatore 2 PID: %d\n", shared_memory[PID2]);
-            //bot giocatore automatico
+            // bot giocatore automatico
             symbol = shared_memory[1];
             player = 1;
         }
 
         sb.sem_op = 2;
         semop(semid, &sb, 1);
-    
     }
     int last_turn = -1;
     while (1)
