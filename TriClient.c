@@ -24,6 +24,7 @@
 
 #define PID1 3
 #define PID2 4
+#define TURN_FLAG 30
 
 int semid;
 int semval;
@@ -32,6 +33,7 @@ int *shared_memory;
 char symbol;
 int player;
 int board_start = 9;
+int whoami = 0;
 struct sembuf sb;
 
 int timeout = 0;
@@ -193,33 +195,49 @@ void correct_move()
     int row, col;               // Righe e colonne
     bool valid_move = false;    // Mossa valida messa a false
 
-    // Timer
-    alarm(shared_memory[7]);
-
     while (!valid_move)
     {
-        printf("\n");
-        printf("Il tuo turno (%c)\n", symbol);
-        printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
-        scanf("%d %d", &row, &col);
-        if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
+        if (sono_CPU)
         {
-            int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
-            if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
+            row = rand() % dim;
+            col = rand() % dim;
+            int index = board_start + row * dim + col;
+            if (shared_memory[index] == ' ') // Controlla se la cella è vuota
             {
-                // Inserisce il simbolo corretto per il giocatore
+                // Inserisce il simbolo corretto per il bot
                 shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
                 valid_move = true;
-                alarm(0);
-            }
-            else if (!asterisco)
-            {
-                printf("Cella già occupata. Riprova.\n");
+                printf("Il bot (%c) ha scelto la mossa: riga %d, colonna %d\n",
+                       shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1], row, col);
             }
         }
-        else if (!asterisco)
+        else
         {
-            printf("Mossa non valida. Riprova.\n");
+            // Timer
+            alarm(shared_memory[7]);
+            printf("\n");
+            printf("Il tuo turno (%c)\n", symbol);
+            printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
+            scanf("%d %d", &row, &col);
+            if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
+            {
+                int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
+                if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
+                {
+                    // Inserisce il simbolo corretto per il giocatore
+                    shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
+                    valid_move = true;
+                    alarm(0);
+                }
+                else if (!sono_CPU)
+                {
+                    printf("Cella già occupata. Riprova.\n");
+                }
+            }
+            else if (!sono_CPU)
+            {
+                printf("Mossa non valida. Riprova.\n");
+            }
         }
     }
 
@@ -231,7 +249,7 @@ void print_matrix()
 {
     printf("\n");
     printf("Tabellone corrente: \n");
-    printf("------------------- \n");
+    printf("-----------\n");
     int dim = shared_memory[8]; // dimensione della matrice
     for (int i = 0; i < dim; i++)
     {
@@ -254,7 +272,86 @@ void print_matrix()
             printf("\n");
         }
     }
-    printf("------------------- \n");
+    printf("-----------\n");
+}
+
+void how_to_play()
+{
+    int dim = shared_memory[8]; // Dimensione della matrice
+    if (asterisco)
+    {
+        // Spiegazione del gioco
+        printf("Benvenuto nel gioco del Tris!\n");
+        printf("Ecco come giocare in modalità BOT:\n");
+        printf("1. Il tuo obiettivo sarà quello di sconfiggere il bot.\n");
+        printf("2. Per fare una mossa, scegli la combinazione di riga e colonna della cella.\n");
+        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n\n", dim);
+
+        // Stampa della matrice di gioco
+        printf("Matrice di gioco:\n");
+        printf("---------------\n");
+        for (int i = 0; i < dim; i++)
+        {
+            for (int j = 0; j < dim; j++)
+            {
+                // Stampa la combinazione riga e colonna
+                printf(" %d-%d ", i, j);
+                if (j < dim - 1)
+                    printf("|");
+            }
+            printf("\n");
+
+            // Stampa la separazione tra le righe
+            if (i < dim - 1)
+            {
+                for (int k = 0; k < dim; k++)
+                {
+                    printf("----");
+                    if (k < dim - 1)
+                        printf("+");
+                }
+                printf("\n");
+            }
+        }
+        printf("---------------\n");
+    }
+    else
+    {
+        // Spiegazione del gioco
+        printf("Benvenuto nel gioco del Tris!\n");
+        printf("Ecco come giocare:\n");
+        printf("1. Ogni giocatore alterna il turno per piazzare il proprio simbolo.\n");
+        printf("2. Per fare una mossa, scegli la combinazione di riga e colonna della cella.\n");
+        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n\n", dim);
+
+        // Stampa della matrice di gioco
+        printf("Matrice di gioco:\n");
+        printf("---------------\n");
+        for (int i = 0; i < dim; i++)
+        {
+            for (int j = 0; j < dim; j++)
+            {
+                // Stampa la combinazione riga e colonna
+                printf(" %d-%d ", i, j);
+                if (j < dim - 1)
+                    printf("|");
+            }
+            printf("\n");
+
+            // Stampa la separazione tra le righe
+            if (i < dim - 1)
+            {
+                for (int k = 0; k < dim; k++)
+                {
+                    printf("----");
+                    if (k < dim - 1)
+                        printf("+");
+                }
+                printf("\n");
+            }
+        }
+        printf("---------------\n");
+    }
 }
 
 int main(int argc, char *argv[])
@@ -295,8 +392,22 @@ int main(int argc, char *argv[])
 
     // Ottengo il timeout impostato:
     timeout = shared_memory[7];
+    if (asterisco)
+    {
+        kill(shared_memory[2], SIGTERM);
+    }
 
-    if (!asterisco && !sono_CPU)
+    whoami = getpid();
+    if (whoami == shared_memory[PID2])
+    {
+        sono_CPU = true;
+    }
+    else
+    {
+        sono_CPU = false;
+    }
+
+    if (asterisco == false && sono_CPU == false)
     {
         sb.sem_op = 1;
         semop(semid, &sb, 1);
@@ -305,7 +416,8 @@ int main(int argc, char *argv[])
         if (semval == 1)
         {
             shared_memory[PID1] = getpid();
-            printf("Giocatore 1 PID: %d\n", shared_memory[PID1]);
+            how_to_play();
+
             printf("\n");
             printf("\nIn attesa di un altro giocatore...\n");
             printf("\n");
@@ -320,7 +432,8 @@ int main(int argc, char *argv[])
         else
         {
             shared_memory[PID2] = getpid();
-            printf("Giocatore 2 PID: %d\n", shared_memory[PID2]);
+            how_to_play();
+
             printf("\n");
             printf("\nSei il secondo giocatore...\n");
             printf("\n");
@@ -334,19 +447,18 @@ int main(int argc, char *argv[])
     }
     else
     {
-
-        kill(shared_memory[2], SIGTERM);
-        int whoami = getpid();
-        if (shared_memory[PID2] = whoami)
+        if (!sono_CPU)
         {
-            printf("Giocatore 1 PID: %d\n", shared_memory[PID1]);
+            shared_memory[PID1] = getpid();
+            how_to_play();
             symbol = shared_memory[0];
             player = 0;
+
             printf("\nIl tuo simbolo è: %c\n", symbol);
         }
         else
         {
-            printf("Giocatore 2 PID: %d\n", shared_memory[PID2]);
+            printf("Singolo BOT: %d\n", shared_memory[PID2]);
             // bot giocatore automatico
             symbol = shared_memory[1];
             player = 1;
@@ -355,18 +467,20 @@ int main(int argc, char *argv[])
         sb.sem_op = 2;
         semop(semid, &sb, 1);
     }
-    int last_turn = -1;
+
+    // int last_turn = -1;
     while (1)
     {
-        if (shared_memory[5] != last_turn)
+        if (!sono_CPU && shared_memory[TURN_FLAG] == 1)
         {
             print_matrix();
-            last_turn = shared_memory[5];
+            // last_turn = shared_memory[5];
         }
 
         if (shared_memory[5] == player)
         {
             correct_move();
+            shared_memory[TURN_FLAG] = 1;
         }
 
         sleep(1);

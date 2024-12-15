@@ -80,8 +80,11 @@ void sig_fork_generator(int sig)
             // exec
             computer = true;
             execl("./TriClient", "./TriClient", "bot", (char *)NULL);
-        }else{
+        }
+        else
+        {
             shared_memory[PID2] = bot_pid;
+            printf("PID del bot: %d", shared_memory[PID2]);
         }
     }
 }
