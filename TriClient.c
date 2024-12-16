@@ -289,13 +289,13 @@ void how_to_play()
 
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("---------------\n");
+        printf("-------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
             {
                 // Stampa la combinazione riga e colonna
-                printf(" %d-%d ", i, j);
+                printf(" %d%d ", i, j);
                 if (j < dim - 1)
                     printf("|");
             }
@@ -313,7 +313,7 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("---------------\n");
+        printf("-------------\n");
     }
     else
     {
@@ -326,13 +326,13 @@ void how_to_play()
 
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("---------------\n");
+        printf("-------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
             {
                 // Stampa la combinazione riga e colonna
-                printf(" %d-%d ", i, j);
+                printf(" %d%d ", i, j);
                 if (j < dim - 1)
                     printf("|");
             }
@@ -350,7 +350,7 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("---------------\n");
+        printf("-------------\n");
     }
 }
 

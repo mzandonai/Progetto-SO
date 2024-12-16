@@ -84,7 +84,6 @@ void sig_fork_generator(int sig)
         else
         {
             shared_memory[PID2] = bot_pid;
-            printf("PID del bot: %d", shared_memory[PID2]);
         }
     }
 }
@@ -380,7 +379,8 @@ int main(int argc, char *argv[])
 
     if (semop(semid, &sop, 1) == -1)
     {
-        perror("Errore in semop durante l'attesa\n");
+        printf("Errore durante durante l'attesa dei giocatori\n");
+        exit(0);
     }
 
     printf("Due giocatori connessi...la parita ha inizio\n");
