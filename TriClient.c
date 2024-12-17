@@ -40,6 +40,7 @@ int timeout = 0;
 int ctrl_count = 0; // CTRL + C contatore
 
 bool asterisco = false; // giocatore automatico
+bool dual_mode = false;
 bool sono_CPU = false;
 
 // Cancellazione del segmento di memoria
@@ -71,7 +72,7 @@ void startup_controls(int argc, char *argv[])
     // Controlla il formato corretto degli argomenti
     if (argc == 2)
     {
-        asterisco = false; // Modalità giocatore reale
+        dual_mode = true;
     }
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
     {
@@ -90,21 +91,29 @@ void startup_controls(int argc, char *argv[])
 // Gestore del CTRL + L --> SIGURS1
 void sig_handle_ctrl(int sig)
 {
-    if (ctrl_count == 0)
+    if (!sono_CPU)
     {
-        printf("\nHai premuto CTRL+C, premi di nuovo per terminare\n");
-        ctrl_count++;
+        if (ctrl_count == 0)
+        {
+            printf("\nHai premuto CTRL+C, premi di nuovo per terminare\n");
+            ctrl_count++;
+        }
+        else
+        {
+            printf("\n");
+            printf("---------------------------------------------------\n");
+            printf("    G A M E   O V E R : Hai perso! Ti sei ritirato\n");
+            printf("---------------------------------------------------\n");
+            printf("\n");
+            // Segnale kill
+            shared_memory[6] = 3; // client abbandonato
+            kill(shared_memory[2], SIGUSR1);
+            cleanup();
+            exit(0);
+        }
     }
     else
     {
-        printf("\n");
-        printf("---------------------------------------------------\n");
-        printf("    G A M E   O V E R : Hai perso! Ti sei ritirato\n");
-        printf("---------------------------------------------------\n");
-        printf("\n");
-        // Segnale kill
-        shared_memory[6] = 3; // client abbandonato
-        kill(shared_memory[2], SIGUSR1);
         cleanup();
         exit(0);
     }
@@ -113,80 +122,164 @@ void sig_handle_ctrl(int sig)
 // Ricevuto SIGUSR1 chiude il client
 void sig_client_closed(int sig) // SIGUSR1
 {
-    printf("\n");
-    printf("---------------------------------------------------------------------\n");
-    printf("    G A M E   O V E R : Hai vinto! Il tuo avvversario ha abbandonato\n");
-    printf("---------------------------------------------------------------------\n");
-    printf("\n");
-    cleanup();
-    exit(0);
+    if (!sono_CPU)
+    {
+
+        printf("\n");
+        printf("---------------------------------------------------------------------\n");
+        printf("    G A M E   O V E R : Hai vinto! Il tuo avversario ha abbandonato\n");
+        printf("---------------------------------------------------------------------\n");
+        printf("\n");
+        cleanup();
+        exit(0);
+    }
+    else
+    {
+        cleanup();
+        exit(0);
+    }
 }
 
 // Ricevuto SIGTERM chiude il client
 void sig_server_closed(int sig) // SIGTERM
 {
-    if (shared_memory[6] == 1)
+    if (asterisco && !sono_CPU)
     {
-        if (shared_memory[5] == player)
+        if (shared_memory[6] == 1)
+        {
+            if (shared_memory[5] == player)
+            {
+                printf("\n");
+                printf("-------------------------------------------------------\n");
+                printf("    G A M E   O V E R : Vittoria!\n");
+                printf("-------------------------------------------------------\n");
+                printf("\n");
+                cleanup();
+                exit(0);
+            }
+            else
+            {
+                printf("\n");
+                printf("-------------------------------------------------------\n");
+                printf("    G A M E   O V E R : Hai perso!\n");
+                printf("-------------------------------------------------------\n");
+                printf("\n");
+                cleanup();
+                exit(0);
+            }
+        }
+        else if (shared_memory[6] == 2)
         {
             printf("\n");
-            printf("-------------------------------------------------------\n");
-            printf("    G A M E   O V E R : Hai perso!\n");
-            printf("-------------------------------------------------------\n");
+            printf("---------------------------------\n");
+            printf("    G A M E   O V E R : Pareggio!\n");
+            printf("---------------------------------\n");
             printf("\n");
+            cleanup();
+            exit(0);
         }
         else
         {
             printf("\n");
             printf("-------------------------------------------------------\n");
-            printf("    G A M E   O V E R : Vittoria!\n");
+            printf("    G A M E   O V E R : Partita terminata forzatamente\n");
             printf("-------------------------------------------------------\n");
             printf("\n");
+            cleanup();
             exit(0);
         }
     }
-    else if (shared_memory[6] == 2)
+    else if (!sono_CPU && !asterisco)
     {
-        printf("\n");
-        printf("---------------------------------\n");
-        printf("    G A M E   O V E R : Pareggio!\n");
-        printf("---------------------------------\n");
-        printf("\n");
+        if (shared_memory[6] == 1)
+        {
+            if (shared_memory[5] == player)
+            {
+                printf("\n");
+                printf("-------------------------------------------------------\n");
+                printf("    G A M E   O V E R : Hai perso!\n");
+                printf("-------------------------------------------------------\n");
+                printf("\n");
+                cleanup();
+                exit(0);
+            }
+            else
+            {
+                printf("\n");
+                printf("-------------------------------------------------------\n");
+                printf("    G A M E   O V E R : Vittoria!\n");
+                printf("-------------------------------------------------------\n");
+                printf("\n");
+                cleanup();
+                exit(0);
+            }
+        }
+        else if (shared_memory[6] == 2)
+        {
+            printf("\n");
+            printf("---------------------------------\n");
+            printf("    G A M E   O V E R : Pareggio!\n");
+            printf("---------------------------------\n");
+            printf("\n");
+            cleanup();
+            exit(0);
+        }
+        else
+        {
+            printf("\n");
+            printf("-------------------------------------------------------\n");
+            printf("    G A M E   O V E R : Partita terminata forzatamente\n");
+            printf("-------------------------------------------------------\n");
+            printf("\n");
+            cleanup();
+            exit(0);
+        }
     }
     else
     {
-        printf("\n");
-        printf("-------------------------------------------------------\n");
-        printf("    G A M E   O V E R : Partita terminata forzatamente\n");
-        printf("-------------------------------------------------------\n");
-        printf("\n");
+        cleanup();
+        exit(0);
     }
-    cleanup();
-    exit(0);
 }
 
 // Quando il timer scade avvisa il server con SIGUSR2
 void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
 {
-    printf("\n");
-    printf("-------------------------------------------------\n");
-    printf("    G A M E   O V E R : Hai perso! Timer scaduto\n");
-    printf("-------------------------------------------------\n");
-    printf("\n");
-    kill(shared_memory[2], SIGUSR2);
-    cleanup();
-    exit(0);
+    if (!sono_CPU)
+    {
+        printf("\n");
+        printf("-------------------------------------------------\n");
+        printf("    G A M E   O V E R : Hai perso! Timer scaduto\n");
+        printf("-------------------------------------------------\n");
+        printf("\n");
+        kill(shared_memory[2], SIGUSR2);
+        cleanup();
+        exit(0);
+    }
+    else
+    {
+        cleanup();
+        exit(0);
+    }
 }
 
 void sig_receive_timeout(int sig)
 {
-    printf("\n");
-    printf("-----------------------------------------------\n");
-    printf("    G A M E   O V E R : Hai vinto per timeout!\n");
-    printf("-----------------------------------------------\n");
-    printf("\n");
-    cleanup();
-    exit(0);
+    if (!sono_CPU)
+    {
+        printf("\n");
+        printf("-----------------------------------------------\n");
+        printf("    G A M E   O V E R : Hai vinto per timeout!\n");
+        printf("-----------------------------------------------\n");
+        printf("\n");
+        cleanup();
+        exit(0);
+    }
+    else
+    {
+        cleanup();
+        exit(0);
+    }
 }
 
 void correct_move()
@@ -285,8 +378,8 @@ void how_to_play()
         printf("Ecco come giocare in modalità BOT:\n");
         printf("1. Il tuo obiettivo sarà quello di sconfiggere il bot.\n");
         printf("2. Per fare una mossa, scegli la combinazione di riga e colonna della cella.\n");
-        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n\n", dim);
-
+        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n", dim);
+        printf("4. Hai %d secondi per effettuare la mossa\n\n", timeout);
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
         printf("-------------\n");
@@ -322,7 +415,8 @@ void how_to_play()
         printf("Ecco come giocare:\n");
         printf("1. Ogni giocatore alterna il turno per piazzare il proprio simbolo.\n");
         printf("2. Per fare una mossa, scegli la combinazione di riga e colonna della cella.\n");
-        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n\n", dim);
+        printf("3. Il primo giocatore che allinea %d simboli in riga, colonna o diagonale vince!\n", dim);
+        printf("4. Hai %d secondi per effettuare la mossa\n\n", timeout);
 
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
@@ -407,7 +501,7 @@ int main(int argc, char *argv[])
         sono_CPU = false;
     }
 
-    if (asterisco == false && sono_CPU == false)
+    if (!asterisco && !sono_CPU)
     {
         sb.sem_op = 1;
         semop(semid, &sb, 1);
@@ -458,7 +552,6 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("Singolo BOT: %d\n", shared_memory[PID2]);
             // bot giocatore automatico
             symbol = shared_memory[1];
             player = 1;

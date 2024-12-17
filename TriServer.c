@@ -321,14 +321,14 @@ int main(int argc, char *argv[])
     if (shmid == -1)
     {
         perror("shmget");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     shared_memory = (int *)shmat(shmid, NULL, 0);
     if (shared_memory == (int *)-1)
     {
         perror("shmat");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     /* inizializzazione shared memory */
@@ -354,7 +354,7 @@ int main(int argc, char *argv[])
     if (semid < 0)
     {
         perror("semget");
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     /*
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
     {
         perror("Errore nell'assegnazione -2 al semaforo\n");
         cleanup();
-        exit(EXIT_FAILURE);
+        exit(0);
     }
 
     // Il gioco va avanti fin quando un giocatore vince o pareggia
@@ -379,7 +379,11 @@ int main(int argc, char *argv[])
 
     if (semop(semid, &sop, 1) == -1)
     {
-        printf("Errore durante durante l'attesa dei giocatori\n");
+        printf("\n");
+        printf("----------------------------------------------------\n");
+        printf("    G A M E   O V E R : Partita terminata\n");
+        printf("----------------------------------------------------\n");
+        printf("\n");
         exit(0);
     }
 
