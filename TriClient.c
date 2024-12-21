@@ -151,7 +151,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Hai perso!\n");
+                printf("    G A M E   O V E R : Vittoria!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -161,7 +161,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Vittoria!\n");
+                printf("    G A M E   O V E R : Hai perso!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -330,6 +330,7 @@ void correct_move()
             else if (!sono_CPU)
             {
                 printf("Mossa non valida. Riprova.\n");
+                break;
             }
         }
     }
@@ -537,7 +538,6 @@ int main(int argc, char *argv[])
 
         printf("Il tuo simbolo è %c\n", symbol);
         printf("\n");
-        print_matrix();
     }
     else
     {
@@ -549,7 +549,6 @@ int main(int argc, char *argv[])
             player = 0;
 
             printf("\nIl tuo simbolo è: %c\n", symbol);
-            print_matrix();
         }
         else
         {
@@ -563,9 +562,21 @@ int main(int argc, char *argv[])
     }
 
     int last_turn = 0;
+
     while (1)
     {
-        if (!sono_CPU && shared_memory[TURN_FLAG] == 1 && last_turn != 1)
+        // da sistemare
+        if (shared_memory[5] == player)
+        {
+            if (!sono_CPU)
+            {
+                print_matrix();
+            }
+            correct_move();
+        }
+
+        /*
+        if (!sono_CPU && last_turn != 1)
         {
             print_matrix();
             last_turn = 1;
@@ -573,10 +584,14 @@ int main(int argc, char *argv[])
 
         if (shared_memory[5] == player)
         {
+            if (!sono_CPU)
+            {
+                print_matrix();
+            }
             correct_move();
-            shared_memory[TURN_FLAG] = 1;
             last_turn = 0;
         }
+        */
 
         sleep(1);
     }
