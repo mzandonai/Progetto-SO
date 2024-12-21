@@ -151,7 +151,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Vittoria!\n");
+                printf("    G A M E   O V E R : Hai perso!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -161,7 +161,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Hai perso!\n");
+                printf("    G A M E   O V E R : Vittoria!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -382,7 +382,7 @@ void how_to_play()
         printf("4. Hai %d secondi per effettuare la mossa\n\n", timeout);
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("-------------\n");
+        printf("--------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
@@ -406,7 +406,7 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("-------------\n");
+        printf("--------------\n");
     }
     else
     {
@@ -420,7 +420,7 @@ void how_to_play()
 
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("-------------\n");
+        printf("--------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
@@ -444,7 +444,7 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("-------------\n");
+        printf("--------------\n");
     }
 }
 
@@ -529,15 +529,15 @@ int main(int argc, char *argv[])
             how_to_play();
 
             printf("\n");
-            printf("\nSei il secondo giocatore...\n");
+            printf("\nSei il secondo giocatore, la partita ha inizio...\n");
             printf("\n");
             symbol = shared_memory[1];
             player = 1;
         }
 
+        printf("Il tuo simbolo è %c\n", symbol);
         printf("\n");
-        printf("\nIl tuo simbolo è %c\n", symbol);
-        printf("\n");
+        print_matrix();
     }
     else
     {
@@ -549,6 +549,7 @@ int main(int argc, char *argv[])
             player = 0;
 
             printf("\nIl tuo simbolo è: %c\n", symbol);
+            print_matrix();
         }
         else
         {
@@ -561,19 +562,20 @@ int main(int argc, char *argv[])
         semop(semid, &sb, 1);
     }
 
-    // int last_turn = -1;
+    int last_turn = 0;
     while (1)
     {
-        if (!sono_CPU && shared_memory[TURN_FLAG] == 1)
+        if (!sono_CPU && shared_memory[TURN_FLAG] == 1 && last_turn != 1)
         {
             print_matrix();
-            // last_turn = shared_memory[5];
+            last_turn = 1;
         }
 
         if (shared_memory[5] == player)
         {
             correct_move();
             shared_memory[TURN_FLAG] = 1;
+            last_turn = 0;
         }
 
         sleep(1);
