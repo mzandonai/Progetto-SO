@@ -282,6 +282,35 @@ void sig_receive_timeout(int sig)
     }
 }
 
+void print_matrix()
+{
+    printf("\n");
+    printf("-----------\n");
+    int dim = shared_memory[8]; // dimensione della matrice
+    for (int i = 0; i < dim; i++)
+    {
+        for (int j = 0; j < dim; j++)
+        {
+            char cell = shared_memory[board_start + i * dim + j];
+            printf(" %c ", cell == ' ' ? '.' : cell); // Mostra '.' per celle vuote
+            if (j < dim - 1)
+                printf("|");
+        }
+        printf("\n");
+        if (i < dim - 1)
+        {
+            for (int k = 0; k < dim; k++)
+            {
+                printf("---");
+                if (k < dim - 1)
+                    printf("+");
+            }
+            printf("\n");
+        }
+    }
+    printf("-----------\n");
+}
+
 void correct_move()
 {
     int dim = shared_memory[8]; // Dimensione della matrice
@@ -321,6 +350,12 @@ void correct_move()
                     shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
                     valid_move = true;
                     alarm(0);
+                    if (!sono_CPU)
+                    {
+                        printf("\n");
+                        printf("\nTabellone dopo la tua mossa:\n");
+                        print_matrix();
+                    }
                 }
                 else if (!sono_CPU)
                 {
@@ -337,36 +372,6 @@ void correct_move()
 
     // Passa il turno all'altro giocatore
     shared_memory[5] = (shared_memory[5] == 0) ? 1 : 0;
-}
-
-void print_matrix()
-{
-    printf("\n");
-    printf("Tabellone corrente: \n");
-    printf("-----------\n");
-    int dim = shared_memory[8]; // dimensione della matrice
-    for (int i = 0; i < dim; i++)
-    {
-        for (int j = 0; j < dim; j++)
-        {
-            char cell = shared_memory[board_start + i * dim + j];
-            printf(" %c ", cell == ' ' ? '.' : cell); // Mostra '.' per celle vuote
-            if (j < dim - 1)
-                printf("|");
-        }
-        printf("\n");
-        if (i < dim - 1)
-        {
-            for (int k = 0; k < dim; k++)
-            {
-                printf("---");
-                if (k < dim - 1)
-                    printf("+");
-            }
-            printf("\n");
-        }
-    }
-    printf("-----------\n");
 }
 
 void how_to_play()
@@ -573,6 +578,7 @@ int main(int argc, char *argv[])
                 print_matrix();
             }
             correct_move();
+            printf("\nL'avversario sta eseguendo la mossa...\n");
         }
 
         /*
