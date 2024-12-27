@@ -316,6 +316,7 @@ void print_matrix()
 
 void correct_move()
 {
+    char input[4];
     int dim = shared_memory[8]; // Dimensione della matrice
     int row, col;               // Righe e colonne
     bool valid_move = false;    // Mossa valida messa a false
@@ -343,32 +344,59 @@ void correct_move()
             printf("\n");
             printf("Il tuo turno (%c)\n", symbol);
             printf("Inserisci la riga e la colonna per la tua mossa (es. 1 2): ");
-            scanf("%d %d", &row, &col);
-            if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
+
+            memset(input, 0, sizeof(input));
+
+            if (fgets(input, sizeof(input), stdin) != NULL)
             {
-                int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
-                if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
+                if(strchr(input, '\n') == NULL){
+                    int ch;
+                    while ((ch = getchar()) != '\n' && ch != EOF);                   
+                }
+
+                char *error_message = NULL;
+                if (sscanf(input, "%d %d", &row, &col) == 2)
                 {
-                    // Inserisce il simbolo corretto per il giocatore
-                    shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
-                    valid_move = true;
-                    alarm(0);
-                    if (!sono_CPU)
+                    if (row >= 0 && row < dim && col >= 0 && col < dim) // Controlla i limiti
                     {
-                        printf("\n");
-                        printf("\nTabellone dopo la tua mossa:\n");
-                        print_matrix();
+                        int index = board_start + row * dim + col; // Calcola l'indice nella memoria condivisa
+                        if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
+                        {
+                            // Inserisce il simbolo corretto per il giocatore
+                            shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
+                            valid_move = true;
+                            alarm(0);
+
+                            if (!sono_CPU)
+                            {
+                                printf("\n");
+                                printf("\nTabellone dopo la tua mossa:\n");
+                                print_matrix();
+                            }
+                        }
+                        else if (!sono_CPU)
+                        {
+                            error_message = "Cella già occupata. Riprova.";
+                        }
+                    }
+                    else if (!sono_CPU)
+                    {
+                        error_message = "Mossa fuori range. Riprova.";
                     }
                 }
                 else if (!sono_CPU)
                 {
-                    printf("Cella già occupata. Riprova.\n");
+                    error_message = "Input non valido. Riprova.";
+                }
+
+                if (error_message != NULL)
+                {
+                    printf("\n%s\n", error_message);
                 }
             }
             else if (!sono_CPU)
             {
-                printf("Mossa non valida. Riprova.\n");
-                break;
+                printf("\nErrore nell'input. Riprova\n");
             }
         }
     }
