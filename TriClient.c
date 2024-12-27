@@ -47,13 +47,16 @@ bool sono_CPU = false;
 void cleanup()
 {
     // Deallocazione memoria condivisa
-    if (shared_memory != NULL)
+    if (!sono_CPU)
     {
         if (shmdt(shared_memory) == -1)
         {
             perror("Errore durante distacco mem. condivisa");
-            exit(EXIT_FAILURE);
         }
+    }
+    else
+    {
+        shmdt(shared_memory);
     }
 }
 
@@ -161,7 +164,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Hai perso!\n");
+                printf("    G A M E   O V E R : Diomme Hai perso!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -577,6 +580,7 @@ int main(int argc, char *argv[])
             {
                 print_matrix();
             }
+
             correct_move();
             printf("\nL'avversario sta eseguendo la mossa...\n");
         }

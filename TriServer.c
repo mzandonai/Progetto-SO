@@ -380,9 +380,7 @@ int main(int argc, char *argv[])
     if (semop(semid, &sop, 1) == -1)
     {
         printf("\n");
-        printf("----------------------------------------------------\n");
-        printf("    G A M E   O V E R : Partita terminata\n");
-        printf("----------------------------------------------------\n");
+        printf("Errore con il semaforo\n");
         printf("\n");
         exit(0);
     }
@@ -406,7 +404,8 @@ int main(int argc, char *argv[])
             shared_memory[6] = 1; // Vittoria
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
-            break;
+            cleanup();
+            exit(0);
         }
 
         if (draw())
@@ -415,7 +414,8 @@ int main(int argc, char *argv[])
             shared_memory[6] = 2; // Stato: pareggio
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
-            break;
+            cleanup();
+            exit(0);
         }
 
         sleep(1);
