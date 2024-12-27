@@ -127,7 +127,6 @@ void sig_client_closed(int sig) // SIGUSR1
 {
     if (!sono_CPU)
     {
-
         printf("\n");
         printf("---------------------------------------------------------------------\n");
         printf("    G A M E   O V E R : Hai vinto! Il tuo avversario ha abbandonato\n");
@@ -154,7 +153,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Vittoria!\n");
+                printf("    G A M E   O V E R : Vittoria [BOT]!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -164,7 +163,7 @@ void sig_server_closed(int sig) // SIGTERM
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Diomme Hai perso!\n");
+                printf("    G A M E   O V E R : Hai perso [BOT]!\n");
                 printf("-------------------------------------------------------\n");
                 printf("\n");
                 cleanup();
@@ -333,8 +332,6 @@ void correct_move()
                 // Inserisce il simbolo corretto per il bot
                 shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
                 valid_move = true;
-                printf("Il bot (%c) ha scelto la mossa: riga %d, colonna %d\n",
-                       shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1], row, col);
             }
         }
         else
@@ -349,9 +346,11 @@ void correct_move()
 
             if (fgets(input, sizeof(input), stdin) != NULL)
             {
-                if(strchr(input, '\n') == NULL){
+                if (strchr(input, '\n') == NULL)
+                {
                     int ch;
-                    while ((ch = getchar()) != '\n' && ch != EOF);                   
+                    while ((ch = getchar()) != '\n' && ch != EOF)
+                        ;
                 }
 
                 char *error_message = NULL;
@@ -610,7 +609,10 @@ int main(int argc, char *argv[])
             }
 
             correct_move();
-            printf("\nL'avversario sta eseguendo la mossa...\n");
+            if (!sono_CPU)
+            {
+                printf("\nL'avversario sta eseguendo la mossa...\n");
+            }
         }
 
         /*

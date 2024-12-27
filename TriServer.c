@@ -382,6 +382,16 @@ int main(int argc, char *argv[])
         printf("\n");
         printf("Errore con il semaforo\n");
         printf("\n");
+        if (kill(shared_memory[PID1], 0) == 0)
+        {
+            kill(shared_memory[PID1], SIGUSR1);
+        }
+
+        if (kill(shared_memory[PID2], 0) == 0)
+        {
+            kill(shared_memory[PID2], SIGUSR1);
+        }
+        cleanup();
         exit(0);
     }
 
