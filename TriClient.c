@@ -24,7 +24,7 @@
 
 #define PID1 3
 #define PID2 4
-#define TURN_FLAG 30
+#define STATUS 6
 
 int semid;
 int semval;
@@ -40,7 +40,6 @@ int timeout = 0;
 int ctrl_count = 0; // CTRL + C contatore
 
 bool asterisco = false; // giocatore automatico
-bool dual_mode = false;
 bool sono_CPU = false;
 
 // Cancellazione del segmento di memoria
@@ -56,7 +55,10 @@ void cleanup()
     }
     else
     {
-        shmdt(shared_memory);
+        if (shmdt(shared_memory) == -1)
+        {
+            perror("Errore durante distacco mem. condivisa");
+        }
     }
 }
 
@@ -75,7 +77,7 @@ void startup_controls(int argc, char *argv[])
     // Controlla il formato corretto degli argomenti
     if (argc == 2)
     {
-        dual_mode = true;
+        asterisco = false;
     }
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
     {
@@ -91,7 +93,7 @@ void startup_controls(int argc, char *argv[])
     }
 }
 
-// Gestore del CTRL + L --> SIGURS1
+// Gestore del CTRL + L --> SIGINT
 void sig_handle_ctrl(int sig)
 {
     if (!sono_CPU)
@@ -118,7 +120,7 @@ void sig_handle_ctrl(int sig)
     else
     {
         cleanup();
-        exit(0);
+        _exit(0);
     }
 }
 
@@ -138,7 +140,7 @@ void sig_client_closed(int sig) // SIGUSR1
     else
     {
         cleanup();
-        exit(0);
+        _exit(0);
     }
 }
 
@@ -147,19 +149,9 @@ void sig_server_closed(int sig) // SIGTERM
 {
     if (asterisco && !sono_CPU)
     {
-        if (shared_memory[6] == 1)
+        if (shared_memory[STATUS] == 1)
         {
             if (shared_memory[5] == player)
-            {
-                printf("\n");
-                printf("-------------------------------------------------------\n");
-                printf("    G A M E   O V E R : Vittoria [BOT]!\n");
-                printf("-------------------------------------------------------\n");
-                printf("\n");
-                cleanup();
-                exit(0);
-            }
-            else
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
@@ -169,8 +161,18 @@ void sig_server_closed(int sig) // SIGTERM
                 cleanup();
                 exit(0);
             }
+            else
+            {
+                printf("\n");
+                printf("-------------------------------------------------------\n");
+                printf("    G A M E   O V E R : Vittoria [BOT]!\n");
+                printf("-------------------------------------------------------\n");
+                printf("\n");
+                cleanup();
+                exit(0);
+            }
         }
-        else if (shared_memory[6] == 2)
+        else if (shared_memory[STATUS] == 2)
         {
             printf("\n");
             printf("---------------------------------\n");
@@ -193,7 +195,7 @@ void sig_server_closed(int sig) // SIGTERM
     }
     else if (!sono_CPU && !asterisco)
     {
-        if (shared_memory[6] == 1)
+        if (shared_memory[STATUS] == 1)
         {
             if (shared_memory[5] == player)
             {
@@ -216,7 +218,7 @@ void sig_server_closed(int sig) // SIGTERM
                 exit(0);
             }
         }
-        else if (shared_memory[6] == 2)
+        else if (shared_memory[STATUS] == 2)
         {
             printf("\n");
             printf("---------------------------------\n");
@@ -237,15 +239,15 @@ void sig_server_closed(int sig) // SIGTERM
             exit(0);
         }
     }
-    else
+    else if (sono_CPU)
     {
         cleanup();
-        exit(0);
+        _exit(0);
     }
 }
 
-// Quando il timer scade avvisa il server con SIGUSR2
-void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
+// Quando il timer scade avvisa il server
+void sig_handle_timeout(int sig) // ALARM CLOCK
 {
     if (!sono_CPU)
     {
@@ -261,11 +263,11 @@ void sig_handle_timeout(int sig) // ALARM CLOCK --> SIGUSR2
     else
     {
         cleanup();
-        exit(0);
+        _exit(0);
     }
 }
 
-void sig_receive_timeout(int sig)
+void sig_receive_timeout(int sig) // SIGUSR2
 {
     if (!sono_CPU)
     {
@@ -280,7 +282,7 @@ void sig_receive_timeout(int sig)
     else
     {
         cleanup();
-        exit(0);
+        _exit(0);
     }
 }
 
@@ -596,9 +598,7 @@ int main(int argc, char *argv[])
         semop(semid, &sb, 1);
     }
 
-    int last_turn = 0;
-
-    while (1)
+    while (shared_memory[STATUS] == 0)
     {
         // da sistemare
         if (shared_memory[5] == player)

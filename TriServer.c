@@ -24,6 +24,7 @@
 
 #define PID1 3
 #define PID2 4
+#define STATUS 6
 
 int matrix_dim = 0;
 int board_start = 9; // inizio della matrice in mem
@@ -38,6 +39,7 @@ int ctrl_count = 0;
 int semid;
 int shmid;
 int *shared_memory;
+int sem_val;
 struct sembuf sop = {0, 0, 0};
 
 // Cancellazione del segmento di memoria
@@ -66,7 +68,7 @@ void cleanup()
 // Generatore del bot
 void sig_fork_generator(int sig)
 {
-    if (shared_memory[6] != 3)
+    if (shared_memory[STATUS] != 3)
     {
         pid_t bot_pid = fork();
         if (bot_pid < 0)
@@ -298,7 +300,6 @@ int main(int argc, char *argv[])
     signal(SIGINT, sig_handle_ctrl);
     signal(SIGUSR1, sig_client_closed);
     signal(SIGUSR2, sig_client_timer);
-
     signal(SIGTERM, sig_fork_generator); // Gestore gioco bot
 
     // Controllo iniziale dei parametri
@@ -338,7 +339,7 @@ int main(int argc, char *argv[])
     shared_memory[3] = 0;          // PID client1
     shared_memory[4] = 0;          // PID client2
     shared_memory[5] = 0;          // turno corrente (0 o 1)
-    shared_memory[6] = 0;          // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 client abbandona)
+    shared_memory[STATUS] = 0;     // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 client abbandona)
     shared_memory[7] = timeout;    // timeout
     shared_memory[8] = matrix_dim; // dimensione matrice
 
@@ -350,7 +351,7 @@ int main(int argc, char *argv[])
     }
 
     // Creazione semaforo
-    semid = semget(SEM_KEY, 1, IPC_CREAT | 0666);
+    semid = semget(SEM_KEY, 1, IPC_CREAT | 0600);
     if (semid < 0)
     {
         perror("semget");
@@ -364,7 +365,7 @@ int main(int argc, char *argv[])
 
     if (semctl(semid, 0, SETVAL, 0) == -1)
     {
-        perror("Errore nell'assegnazione -2 al semaforo\n");
+        perror("Errore nell'assegnazione 0 al semaforo\n");
         cleanup();
         exit(0);
     }
@@ -372,7 +373,6 @@ int main(int argc, char *argv[])
     // Il gioco va avanti fin quando un giocatore vince o pareggia
     printf("In attesa di due giocatori per iniziare la partita...\n");
 
-    struct sembuf sop;
     sop.sem_num = 0;
     sop.sem_op = -2;
     sop.sem_flg = 0;
@@ -384,20 +384,22 @@ int main(int argc, char *argv[])
         printf("\n");
         if (kill(shared_memory[PID1], 0) == 0)
         {
-            kill(shared_memory[PID1], SIGUSR1);
+            kill(shared_memory[PID1], SIGTERM);
         }
 
         if (kill(shared_memory[PID2], 0) == 0)
         {
-            kill(shared_memory[PID2], SIGUSR1);
+            kill(shared_memory[PID2], SIGTERM);
         }
         cleanup();
         exit(0);
     }
 
+    sem_val = semctl(semid, 0, GETVAL);
+    printf("\nValore semaforo: %d\n", sem_val);
     printf("Due giocatori connessi...la parita ha inizio\n");
 
-    shared_memory[6] = 0; // Gioco iniziato
+    shared_memory[STATUS] = 0; // Gioco iniziato
     while (1)
     {
         /*
@@ -411,7 +413,7 @@ int main(int argc, char *argv[])
         if (victory())
         {
             printf("Un giocatore ha vinto\n");
-            shared_memory[6] = 1; // Vittoria
+            shared_memory[STATUS] = 1; // Vittoria
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
             cleanup();
@@ -421,7 +423,7 @@ int main(int argc, char *argv[])
         if (draw())
         {
             printf("Pareggio!\n");
-            shared_memory[6] = 2; // Stato: pareggio
+            shared_memory[STATUS] = 2; // Stato: pareggio
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
             cleanup();
