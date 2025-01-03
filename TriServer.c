@@ -24,22 +24,21 @@
 
 #define PID1 3
 #define PID2 4
+#define TURN 5
 #define STATUS 6
 
-int matrix_dim = 0;
-int board_start = 9; // inizio della matrice in mem
-
-int timeout = 0;
 char player1;
 char player2;
-bool computer = false;
-
 int ctrl_count = 0;
+int matrix_dim = 0;
+int board_start = 9; // inizio della matrice in mem
+int timeout = 0;
+bool computer = false;
 
 int semid;
 int shmid;
-int *shared_memory;
 int sem_val;
+int *shared_memory;
 struct sembuf sop = {0, 0, 0};
 
 // Cancellazione del segmento di memoria
@@ -325,7 +324,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    shared_memory = (int *)shmat(shmid, NULL, 0);
+    shared_memory = (int *)shmat(shmid, NULL, SHM_RND);
     if (shared_memory == (int *)-1)
     {
         perror("shmat");
@@ -336,9 +335,9 @@ int main(int argc, char *argv[])
     shared_memory[0] = player1;    // simbolo player1
     shared_memory[1] = player2;    // simbolo player2
     shared_memory[2] = getpid();   // pid del server
-    shared_memory[3] = 0;          // PID client1
-    shared_memory[4] = 0;          // PID client2
-    shared_memory[5] = 0;          // turno corrente (0 o 1)
+    shared_memory[PID1] = 0;       // PID client1
+    shared_memory[PID2] = 0;       // PID client2
+    shared_memory[TURN] = 0;       // turno corrente (0 o 1)
     shared_memory[STATUS] = 0;     // stato del gioco (0 start, 1 vittoria, 2 pareggio, 3 client abbandona)
     shared_memory[7] = timeout;    // timeout
     shared_memory[8] = matrix_dim; // dimensione matrice
@@ -373,6 +372,7 @@ int main(int argc, char *argv[])
     // Il gioco va avanti fin quando un giocatore vince o pareggia
     printf("In attesa di due giocatori per iniziare la partita...\n");
 
+    /*
     sop.sem_num = 0;
     sop.sem_op = -2;
     sop.sem_flg = 0;
@@ -391,12 +391,19 @@ int main(int argc, char *argv[])
         {
             kill(shared_memory[PID2], SIGTERM);
         }
+
+        check_sem(semid);
         cleanup();
         exit(0);
     }
+    */
 
-    sem_val = semctl(semid, 0, GETVAL);
-    printf("\nValore semaforo: %d\n", sem_val);
+    while (semctl(semid, 0, GETVAL) < 2)
+    {
+        sleep(1);
+        printf("Valore attuale semaforo: %d\n", semctl(semid, 0, GETVAL));
+    }
+
     printf("Due giocatori connessi...la parita ha inizio\n");
 
     shared_memory[STATUS] = 0; // Gioco iniziato
@@ -429,8 +436,6 @@ int main(int argc, char *argv[])
             cleanup();
             exit(0);
         }
-
-        sleep(1);
     }
 
     // Rimozione memoria, semaforo

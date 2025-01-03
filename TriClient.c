@@ -24,7 +24,12 @@
 
 #define PID1 3
 #define PID2 4
+#define TURN 5
 #define STATUS 6
+
+int whoami = 0;
+int timeout = 0;
+int ctrl_count = 0; // CTRL + C contatore
 
 int semid;
 int semval;
@@ -33,11 +38,8 @@ int *shared_memory;
 char symbol;
 int player;
 int board_start = 9;
-int whoami = 0;
-struct sembuf sb;
 
-int timeout = 0;
-int ctrl_count = 0; // CTRL + C contatore
+struct sembuf sb;
 
 bool asterisco = false; // giocatore automatico
 bool sono_CPU = false;
@@ -151,7 +153,9 @@ void sig_server_closed(int sig) // SIGTERM
     {
         if (shared_memory[STATUS] == 1)
         {
-            if (shared_memory[5] == player)
+            printf("\nTurno attuale: %d\n", shared_memory[TURN]);
+
+            if (shared_memory[TURN] == player)
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
@@ -193,11 +197,13 @@ void sig_server_closed(int sig) // SIGTERM
             exit(0);
         }
     }
-    else if (!sono_CPU && !asterisco)
+    else if (!asterisco && !sono_CPU)
     {
         if (shared_memory[STATUS] == 1)
         {
-            if (shared_memory[5] == player)
+            printf("\nTurno attuale: %d\n", shared_memory[TURN]);
+
+            if (shared_memory[TURN] == player)
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
@@ -332,7 +338,7 @@ void correct_move()
             if (shared_memory[index] == ' ') // Controlla se la cella è vuota
             {
                 // Inserisce il simbolo corretto per il bot
-                shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
+                shared_memory[index] = shared_memory[TURN] == 0 ? shared_memory[0] : shared_memory[1];
                 valid_move = true;
             }
         }
@@ -364,7 +370,7 @@ void correct_move()
                         if (shared_memory[index] == ' ')           // Controlla che la cella sia vuota
                         {
                             // Inserisce il simbolo corretto per il giocatore
-                            shared_memory[index] = shared_memory[5] == 0 ? shared_memory[0] : shared_memory[1];
+                            shared_memory[index] = shared_memory[TURN] == 0 ? shared_memory[0] : shared_memory[1];
                             valid_move = true;
                             alarm(0);
 
@@ -403,7 +409,7 @@ void correct_move()
     }
 
     // Passa il turno all'altro giocatore
-    shared_memory[5] = (shared_memory[5] == 0) ? 1 : 0;
+    shared_memory[TURN] = (shared_memory[TURN] == 0) ? 1 : 0;
 }
 
 void how_to_play()
@@ -506,7 +512,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    shared_memory = (int *)shmat(shmid, NULL, 0);
+    shared_memory = (int *)shmat(shmid, NULL, SHM_RND);
     if (shared_memory == (int *)-1)
     {
 
@@ -541,9 +547,13 @@ int main(int argc, char *argv[])
 
     if (!asterisco && !sono_CPU)
     {
+        sb.sem_num = 0;
         sb.sem_op = 1;
+        sb.sem_flg = 0;
+
         semop(semid, &sb, 1);
         semval = semctl(semid, 0, GETVAL);
+        printf("Valore del semaforo: %d\n", semval);
 
         if (semval == 1)
         {
@@ -555,8 +565,8 @@ int main(int argc, char *argv[])
             printf("\n");
             symbol = shared_memory[0];
             player = 0;
-            sb.sem_op--;
-            while (semval != 0)
+            // sb.sem_op--;
+            while (semval != 2)
             {
                 semval = semctl(semid, 0, GETVAL);
             }
@@ -601,7 +611,7 @@ int main(int argc, char *argv[])
     while (shared_memory[STATUS] == 0)
     {
         // da sistemare
-        if (shared_memory[5] == player)
+        if (shared_memory[TURN] == player)
         {
             if (!sono_CPU)
             {
@@ -622,7 +632,7 @@ int main(int argc, char *argv[])
             last_turn = 1;
         }
 
-        if (shared_memory[5] == player)
+        if (shared_memory[TURN] == player)
         {
             if (!sono_CPU)
             {
