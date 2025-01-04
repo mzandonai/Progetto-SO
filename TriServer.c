@@ -357,14 +357,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    /*
-        imposto valore semaforo a -2, incremento quando un
-        giocatore si connette alla partia
-    */
-
-    if (semctl(semid, 0, SETVAL, 0) == -1)
+    if (semctl(semid, 0, SETVAL, 0) == -1) // Imposto a 0 il semaforo
     {
-        perror("Errore nell'assegnazione 0 al semaforo\n");
+        perror("Errore nell'assegnazione di 0 al semaforo\n");
         cleanup();
         exit(0);
     }
@@ -401,7 +396,7 @@ int main(int argc, char *argv[])
     while (semctl(semid, 0, GETVAL) < 2)
     {
         sleep(1);
-        printf("Valore attuale semaforo: %d\n", semctl(semid, 0, GETVAL));
+        semctl(semid, 0, GETVAL);
     }
 
     printf("Due giocatori connessi...la parita ha inizio\n");
@@ -420,7 +415,7 @@ int main(int argc, char *argv[])
         if (victory())
         {
             printf("Un giocatore ha vinto\n");
-            shared_memory[STATUS] = 1; // Vittoria
+            shared_memory[STATUS] = 1; // Stato: Vittoria
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
             cleanup();
