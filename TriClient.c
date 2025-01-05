@@ -84,7 +84,6 @@ void startup_controls(int argc, char *argv[])
     else if (argc == 3 && strcmp(argv[2], "*") == 0)
     {
         asterisco = true; // Modalità bot
-        printf("Modalità bot attiva.\n");
     }
     else
     {
@@ -424,7 +423,6 @@ void how_to_play()
         printf("4. Hai %d secondi per effettuare la mossa\n\n", timeout);
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("--------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
@@ -448,7 +446,6 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("--------------\n");
     }
     else
     {
@@ -462,7 +459,6 @@ void how_to_play()
 
         // Stampa della matrice di gioco
         printf("Matrice di gioco:\n");
-        printf("--------------\n");
         for (int i = 0; i < dim; i++)
         {
             for (int j = 0; j < dim; j++)
@@ -486,7 +482,6 @@ void how_to_play()
                 printf("\n");
             }
         }
-        printf("--------------\n");
     }
 }
 
