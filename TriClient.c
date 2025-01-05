@@ -295,7 +295,6 @@ void sig_receive_timeout(int sig) // SIGUSR2
 void print_matrix()
 {
     printf("\n");
-    printf("-----------\n");
     int dim = shared_memory[8]; // dimensione della matrice
     for (int i = 0; i < dim; i++)
     {
@@ -318,7 +317,6 @@ void print_matrix()
             printf("\n");
         }
     }
-    printf("-----------\n");
 }
 
 void correct_move()
