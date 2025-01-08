@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
 
         if (victory())
         {
-            printf("Un giocatore ha vinto\n");
+            // printf("Un giocatore ha vinto\n");
             shared_memory[STATUS] = 1; // Stato: Vittoria
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);
@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
 
         if (draw())
         {
-            printf("Pareggio!\n");
+            // printf("Pareggio!\n");
             shared_memory[STATUS] = 2; // Stato: pareggio
             kill(shared_memory[PID1], SIGTERM);
             kill(shared_memory[PID2], SIGTERM);

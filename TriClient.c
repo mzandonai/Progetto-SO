@@ -154,7 +154,7 @@ void sig_server_closed(int sig) // SIGTERM
         {
             printf("\nTurno attuale: %d\n", shared_memory[TURN]);
 
-            if (shared_memory[TURN] == player)
+            if (shared_memory[TURN] == 0)
             {
                 printf("\n");
                 printf("-------------------------------------------------------\n");
@@ -404,7 +404,6 @@ void correct_move()
             }
         }
     }
-
     // Passa il turno all'altro giocatore
     shared_memory[TURN] = (shared_memory[TURN] == 0) ? 1 : 0;
 }
