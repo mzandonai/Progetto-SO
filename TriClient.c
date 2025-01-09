@@ -404,6 +404,7 @@ void correct_move()
             }
         }
     }
+
     // Passa il turno all'altro giocatore
     shared_memory[TURN] = (shared_memory[TURN] == 0) ? 1 : 0;
 }

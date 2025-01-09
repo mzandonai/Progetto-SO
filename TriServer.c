@@ -26,6 +26,7 @@
 #define PID2 4
 #define TURN 5
 #define STATUS 6
+#define MOVE_COMPLETED 30
 
 char player1;
 char player2;
@@ -395,7 +396,6 @@ int main(int argc, char *argv[])
 
     while (semctl(semid, 0, GETVAL) < 2)
     {
-        sleep(1);
         semctl(semid, 0, GETVAL);
     }
 
@@ -431,6 +431,8 @@ int main(int argc, char *argv[])
             cleanup();
             exit(0);
         }
+
+        sleep(1);
     }
 
     // Rimozione memoria, semaforo
